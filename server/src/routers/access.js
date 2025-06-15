@@ -1,24 +1,22 @@
 "use strict";
 const express = require("express");
-const { asynchandler } = require("../helpers/asynchandler");
-const accessController = require("../controller/access.controller");
 const { authentication } = require("../auth/authUtils");
+const accessController = require("../controllers/access.controller");
+const { asyncHandler } = require("../helpers/asynchandler");
 const router = express.Router();
-// signUp
-router.post("/register", asynchandler(accessController.singUp));
+router.post("/register", asyncHandler(accessController.singUp));
 
-//signIn
-router.post("/login", asynchandler(accessController.login));
-router.post("/forgot-password", asynchandler(accessController.forgotPassword));
+router.post("/login", asyncHandler(accessController.login));
+router.post("/forgot-password", asyncHandler(accessController.forgotPassword));
 router.post(
   "/confirm-account",
   authentication,
-  asynchandler(accessController.confirmAccount)
+  asyncHandler(accessController.confirmAccount)
 );
 router.post(
   "/reset-password",
   authentication,
-  asynchandler(accessController.resetPassword)
+  asyncHandler(accessController.resetPassword)
 );
 
 module.exports = router;

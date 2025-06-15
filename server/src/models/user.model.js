@@ -21,15 +21,10 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
-    fullName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    role: {
-      type: String,
+    roles: {
+      type: [String],
       enum: ["ADMIN", "USER", "TECHNICIAN", "MANAGER"],
-      default: "USER",
+      default: ["USER"],
     },
     phone: {
       type: String,
@@ -41,7 +36,7 @@ const userSchema = new Schema(
     },
     isActive: {
       type: Boolean,
-      default: true,
+      default: false,
     },
   },
   { timestamps: true, collection: USERS_COLLECTION_NAME }

@@ -3,7 +3,7 @@ const process = require("process");
 
 const mongoose = require("mongoose");
 const connectString =
-  "mongodb+srv://dinhnguyenminhhoang28:TyI2uGQp7xKFkSkw@equipcare.u91l3gc.mongodb.net/?retryWrites=true&w=majority&appName=equipCare";
+  "mongodb+srv://dinhnguyenminhhoang28:TyI2uGQp7xKFkSkw@equipcare.u91l3gc.mongodb.net/equipCareDev?retryWrites=true&w=majority&appName=equipCare";
 
 class Database {
   constructor() {

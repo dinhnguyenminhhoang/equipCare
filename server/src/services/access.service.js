@@ -21,29 +21,31 @@ const {
 const RolesUser = {
   USER: "USER",
   ADMIN: "ADMIN",
+  TECHNICIAN: "TECHNICIAN",
+  MANAGER: "MANAGER",
 };
 
 class AccessService {
-  static singUp = async ({ userName, email, phone, password }) => {
+  static singUp = async ({ username, email, phone, password }) => {
     const hodelUser = await User.findOne({ email }).lean();
     if (hodelUser) {
       throw new badRequestError("error user already rigisted");
     }
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await User.create({
-      userName,
+      username,
       email,
       phone,
       password: passwordHash,
       roles: [RolesUser.USER],
-      status: "inActive",
+      isActive: false,
     });
     const key = crypto.randomBytes(64).toString(`hex`);
     const tokens = await createTokenPair(
       {
         userId: user._id,
         email: user.email,
-        userName: user.userName,
+        username: user.username,
         phone: user.phone,
         type: "confirm",
       },
@@ -68,13 +70,11 @@ class AccessService {
     const foundUser = await findByEmail({
       email,
     });
-    console.log("foundUser", foundUser);
     if (!foundUser) {
       throw new badRequestError("user not registered");
     }
-    if (foundUser.status !== "active")
-      throw new badRequestError("Tài khoản bị khóa");
-    const { _id: userId, userName, roles, phone } = foundUser;
+    if (!foundUser.isActive) throw new badRequestError("Tài khoản bị khóa");
+    const { _id: userId, username, roles, phone } = foundUser;
     const match = await bcrypt.compare(password, foundUser.password);
     if (!match) throw new AuthFailureError("Authentication Error");
     const key = crypto.randomBytes(64).toString(`hex`);
@@ -82,7 +82,7 @@ class AccessService {
       {
         userId: userId,
         email: email,
-        userName,
+        username,
         phone,
         role: roles,
       },
@@ -95,7 +95,7 @@ class AccessService {
 
     return {
       user: getInfoData({
-        fill: ["_id", "userName", "email", "phone"],
+        fill: ["_id", "username", "email", "phone"],
         object: foundUser,
       }),
       tokens,
@@ -110,7 +110,7 @@ class AccessService {
       {
         userId: user._id,
         email: user.email,
-        userName: user.userName,
+        username: user.username,
         phone: user.phone,
         type: "resetPassword",
       },
@@ -150,7 +150,7 @@ class AccessService {
     if (!userExiting?._id && userId) throw new NotFoundError("Not found User");
     const userUpdated = await User.findOneAndUpdate(userExiting._id, {
       ...userExiting,
-      status: "active",
+      isActive: true,
     });
     if (userUpdated) {
       await KeyTokenService.removeKeyById(keyStore._id);

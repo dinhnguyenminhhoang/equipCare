@@ -1,8 +1,8 @@
 "use strict";
 const JWT = require("jsonwebtoken");
-const { asynchandler } = require("../helpers/asynchandler");
 const { AuthFailureError, NotFoundError } = require("../core/error.response");
 const { findByUserId } = require("../services/keyToken.service");
+const { asyncHandler } = require("../helpers/asynchandler");
 
 const HEADER = {
   CLIENT_ID: "x-client-id",
@@ -20,7 +20,7 @@ const createTokenPair = async (payload, key) => {
   }
 };
 
-const authentication = asynchandler(async (req, res, next) => {
+const authentication = asyncHandler(async (req, res, next) => {
   const userId = req.headers[HEADER.CLIENT_ID];
   if (!userId) throw new AuthFailureError("Invalid request");
 
@@ -46,7 +46,7 @@ const authentication = asynchandler(async (req, res, next) => {
     throw new AuthFailureError("Unauthorized access");
   }
 });
-const adminAuthentication = asynchandler(async (req, res, next) => {
+const adminAuthentication = asyncHandler(async (req, res, next) => {
   const userId = req.headers[HEADER.CLIENT_ID];
   if (!userId) throw new AuthFailureError("Invalid request");
 

@@ -7,7 +7,7 @@ const findByEmail = async ({
   seclect = {
     email: 1,
     password: 1,
-    status: 1,
+    isActive: 1,
     roles: 1,
     userName: 1,
     phone: 1,
