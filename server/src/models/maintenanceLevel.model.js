@@ -127,7 +127,6 @@ const maintenanceLevelSchema = new Schema(
 );
 
 // Indexes for optimization
-maintenanceLevelSchema.index({ levelCode: 1 }, { unique: true });
 maintenanceLevelSchema.index({ intervalHours: 1 });
 maintenanceLevelSchema.index({ equipmentTypes: 1 });
 maintenanceLevelSchema.index({ priority: 1 });

@@ -113,7 +113,6 @@ const equipmentSchema = new Schema(
 );
 
 // Indexes for optimization
-equipmentSchema.index({ equipmentCode: 1 }, { unique: true });
 equipmentSchema.index({ type: 1 });
 equipmentSchema.index({ status: 1 });
 equipmentSchema.index({ suppliedDate: 1 });

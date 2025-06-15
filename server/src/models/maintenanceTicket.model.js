@@ -228,7 +228,6 @@ const maintenanceTicketSchema = new Schema(
 );
 
 // Indexes for optimization
-maintenanceTicketSchema.index({ ticketNumber: 1 }, { unique: true });
 maintenanceTicketSchema.index({ equipment: 1 });
 maintenanceTicketSchema.index({ status: 1 });
 maintenanceTicketSchema.index({ priority: 1 });

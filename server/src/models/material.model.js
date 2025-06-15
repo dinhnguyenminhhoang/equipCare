@@ -105,7 +105,6 @@ const materialSchema = new Schema(
 );
 
 // Indexes for optimization
-materialSchema.index({ materialCode: 1 }, { unique: true });
 materialSchema.index({ category: 1 });
 materialSchema.index({ name: "text", description: "text" });
 materialSchema.index({ currentStock: 1 });

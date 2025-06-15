@@ -171,7 +171,6 @@ const inventoryTransactionSchema = new Schema(
 );
 
 // Indexes for optimization
-inventoryTransactionSchema.index({ transactionNumber: 1 }, { unique: true });
 inventoryTransactionSchema.index({ material: 1 });
 inventoryTransactionSchema.index({ transactionType: 1 });
 inventoryTransactionSchema.index({ transactionDate: 1 });
