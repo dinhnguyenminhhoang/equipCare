@@ -82,7 +82,7 @@ class MaintenanceTicketService {
       sortBy = "createdAt",
       sortOrder = "desc",
     } = queryParams;
-
+    // Xử lý và chuẩn bị các bộ lọc
     const filters = { isActive: true };
 
     if (status) filters.status = status;

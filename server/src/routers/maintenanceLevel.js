@@ -7,29 +7,29 @@ const router = express.Router();
 
 // Public routes (with authentication)
 router.get(
-  "/",
+  "/maintenance-levels",
   authentication,
   asyncHandler(maintenanceLevelController.getMaintenanceLevels)
 );
 router.get(
-  "/:id",
+  "/maintenance-levels/:id",
   authentication,
   asyncHandler(maintenanceLevelController.getMaintenanceLevelById)
 );
 
 // Admin routes
 router.post(
-  "/",
+  "/maintenance-levels",
   adminAuthentication,
   asyncHandler(maintenanceLevelController.createMaintenanceLevel)
 );
 router.put(
-  "/:id",
+  "/maintenance-levels/:id",
   adminAuthentication,
   asyncHandler(maintenanceLevelController.updateMaintenanceLevel)
 );
 router.delete(
-  "/:id",
+  "/maintenance-levels/:id",
   adminAuthentication,
   asyncHandler(maintenanceLevelController.deleteMaintenanceLevel)
 );

@@ -352,7 +352,6 @@ repairTicketSchema.index({ reportedDate: 1 });
 repairTicketSchema.index({ scheduledDate: 1 });
 repairTicketSchema.index({ failureType: 1 });
 repairTicketSchema.index({ severity: 1 });
-repairTicketSchema.index({ createdAt: 1 });
 repairTicketSchema.index({ isActive: 1 });
 
 // Compound indexes

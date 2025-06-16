@@ -160,7 +160,6 @@ auditLogSchema.index({ user: 1 });
 auditLogSchema.index({ action: 1 });
 auditLogSchema.index({ entityType: 1 });
 auditLogSchema.index({ entityId: 1 });
-auditLogSchema.index({ createdAt: 1 });
 auditLogSchema.index({ status: 1 });
 auditLogSchema.index({ severity: 1 });
 auditLogSchema.index({ category: 1 });

@@ -237,7 +237,6 @@ maintenanceTicketSchema.index({ assignedTo: 1 });
 maintenanceTicketSchema.index({ scheduledDate: 1 });
 maintenanceTicketSchema.index({ startDate: 1 });
 maintenanceTicketSchema.index({ endDate: 1 });
-maintenanceTicketSchema.index({ createdAt: 1 });
 maintenanceTicketSchema.index({ isActive: 1 });
 
 // Compound indexes

@@ -6,41 +6,41 @@ const { asyncHandler } = require("../helpers/asynchandler");
 const router = express.Router();
 
 // Admin routes for user management
-router.get("/", adminAuthentication, asyncHandler(userController.getUsers));
+router.get("/users", adminAuthentication, asyncHandler(userController.getUsers));
 router.get(
-  "/:id",
+  "/users/:id",
   adminAuthentication,
   asyncHandler(userController.getUserById)
 );
 router.put(
-  "/:id",
+  "/users/:id",
   adminAuthentication,
   asyncHandler(userController.updateUser)
 );
 router.delete(
-  "/:id",
+  "/users/:id",
   adminAuthentication,
   asyncHandler(userController.deleteUser)
 );
 router.patch(
-  "/:id/toggle-status",
+  "/users/:id/toggle-status",
   adminAuthentication,
   asyncHandler(userController.toggleUserStatus)
 );
 
 // Profile routes
 router.get(
-  "/profile/me",
+  "/users/profile/me",
   authentication,
   asyncHandler(userController.getProfile)
 );
 router.put(
-  "/profile/me",
+  "/users/profile/me",
   authentication,
   asyncHandler(userController.updateProfile)
 );
 router.put(
-  "/profile/change-password",
+  "/users/profile/change-password",
   authentication,
   asyncHandler(userController.changePassword)
 );

@@ -7,83 +7,83 @@ const router = express.Router();
 
 // Public routes (with authentication)
 router.get(
-  "/",
+  "/repair-tickets",
   authentication,
   asyncHandler(repairTicketController.getRepairTickets)
 );
 router.get(
-  "/statistics",
+  "/repair-tickets/statistics",
   authentication,
   asyncHandler(repairTicketController.getRepairStatistics)
 );
 router.get(
-  "/export",
+  "/repair-tickets/export",
   authentication,
   asyncHandler(repairTicketController.exportRepairReport)
 );
 router.get(
-  "/failure-analysis",
+  "/repair-tickets/failure-analysis",
   authentication,
   asyncHandler(repairTicketController.getFailureAnalysis)
 );
 router.get(
-  "/:id",
+  "/repair-tickets/:id",
   authentication,
   asyncHandler(repairTicketController.getRepairTicketById)
 );
 
 // Create and update routes
 router.post(
-  "/",
+  "/repair-tickets",
   authentication,
   asyncHandler(repairTicketController.createRepairTicket)
 );
 router.put(
-  "/:id",
+  "/repair-tickets/:id",
   authentication,
   asyncHandler(repairTicketController.updateRepairTicket)
 );
 router.delete(
-  "/:id",
+  "/repair-tickets/:id",
   authentication,
   asyncHandler(repairTicketController.deleteRepairTicket)
 );
 
 // Workflow routes
 router.patch(
-  "/:id/approve",
+  "/repair-tickets/:id/approve",
   adminAuthentication,
   asyncHandler(repairTicketController.approveRepairTicket)
 );
 router.patch(
-  "/:id/diagnose",
+  "/repair-tickets/:id/diagnose",
   authentication,
   asyncHandler(repairTicketController.diagnoseIssue)
 );
 router.patch(
-  "/:id/start",
+  "/repair-tickets/:id/start",
   authentication,
   asyncHandler(repairTicketController.startRepair)
 );
 router.patch(
-  "/:id/complete",
+  "/repair-tickets/:id/complete",
   authentication,
   asyncHandler(repairTicketController.completeRepair)
 );
 
 // Task, material and service routes
 router.patch(
-  "/:id/tasks/:taskId",
+  "/repair-tickets/:id/tasks/:taskId",
   authentication,
   asyncHandler(repairTicketController.updateRepairTask)
 );
 router.post(
-  "/:id/materials",
+  "/repair-tickets/:id/materials",
   authentication,
   asyncHandler(repairTicketController.addMaterialToRepair)
 );
 router.post(
-  "/:id/external-services",
+  "/repair-tickets/:id/external-services",
   authentication,
   asyncHandler(repairTicketController.addExternalService)
 );

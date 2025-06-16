@@ -9,15 +9,12 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
-import { toast } from "react-toastify";
 import Button from "../../components/Common/Button/Button";
 import Input from "../../components/Common/Input/Input";
 import Modal from "../../components/Common/Modal/Modal";
 import Select from "../../components/Common/Select/Select";
 import Table from "../../components/Common/Table/Table";
 import StatsCard from "../../components/StatsCard/StatsCard";
-import MaintenanceTicketDetail from "../../components/MaintenanceTickets/MaintenanceTicketDetail";
-import MaintenanceTicketForm from "../../components/MaintenanceTickets/MaintenanceTicketForm";
 import { useAuth } from "../../context/AuthContext";
 import {
   approveMaintenanceTicket,
@@ -28,6 +25,9 @@ import {
   startMaintenance,
   updateMaintenanceTicket,
 } from "../../services/maintenanceTicketService";
+import MaintenanceTicketDetail from "../../components/MaintenanceTicketDetail/MaintenanceTicketDetail";
+import MaintenanceTicketForm from "../../components/MaintenanceTicketForm/MaintenanceTicketForm";
+import { message } from "antd";
 
 const MaintenanceTickets = () => {
   const { isAdmin, isManager, user } = useAuth();
@@ -68,10 +68,10 @@ const MaintenanceTickets = () => {
         type: filters.type,
         assignedTo: filters.assignedTo,
       });
-      setTickets(response.data);
-      setPagination((prev) => ({ ...prev, total: response.meta.total }));
+      setTickets(response.data.data);
+      setPagination((prev) => ({ ...prev, total: response.data.meta.total }));
     } catch (error) {
-      toast.error("Lỗi khi tải danh sách phiếu bảo dưỡng");
+      message.error("Lỗi khi tải danh sách phiếu bảo dưỡng");
     } finally {
       setLoading(false);
     }
@@ -80,23 +80,23 @@ const MaintenanceTickets = () => {
   const handleCreate = async (data) => {
     try {
       await createMaintenanceTicket(data);
-      toast.success("Tạo phiếu bảo dưỡng thành công");
+      message.success("Tạo phiếu bảo dưỡng thành công");
       setIsCreateModalOpen(false);
       fetchTickets();
     } catch (error) {
-      toast.error("Lỗi khi tạo phiếu bảo dưỡng");
+      message.error("Lỗi khi tạo phiếu bảo dưỡng");
     }
   };
 
   const handleUpdate = async (data) => {
     try {
       await updateMaintenanceTicket(selectedTicket._id, data);
-      toast.success("Cập nhật phiếu bảo dưỡng thành công");
+      message.success("Cập nhật phiếu bảo dưỡng thành công");
       setIsEditModalOpen(false);
       setSelectedTicket(null);
       fetchTickets();
     } catch (error) {
-      toast.error("Lỗi khi cập nhật phiếu bảo dưỡng");
+      message.error("Lỗi khi cập nhật phiếu bảo dưỡng");
     }
   };
 
@@ -104,10 +104,10 @@ const MaintenanceTickets = () => {
     if (window.confirm("Bạn có chắc chắn muốn xóa phiếu bảo dưỡng này?")) {
       try {
         await deleteMaintenanceTicket(ticketId);
-        toast.success("Xóa phiếu bảo dưỡng thành công");
+        message.success("Xóa phiếu bảo dưỡng thành công");
         fetchTickets();
       } catch (error) {
-        toast.error("Lỗi khi xóa phiếu bảo dưỡng");
+        message.error("Lỗi khi xóa phiếu bảo dưỡng");
       }
     }
   };
@@ -115,30 +115,30 @@ const MaintenanceTickets = () => {
   const handleApprove = async (ticketId) => {
     try {
       await approveMaintenanceTicket(ticketId);
-      toast.success("Phê duyệt phiếu bảo dưỡng thành công");
+      message.success("Phê duyệt phiếu bảo dưỡng thành công");
       fetchTickets();
     } catch (error) {
-      toast.error("Lỗi khi phê duyệt phiếu bảo dưỡng");
+      message.error("Lỗi khi phê duyệt phiếu bảo dưỡng");
     }
   };
 
   const handleStart = async (ticketId, data) => {
     try {
       await startMaintenance(ticketId, data);
-      toast.success("Bắt đầu bảo dưỡng thành công");
+      message.success("Bắt đầu bảo dưỡng thành công");
       fetchTickets();
     } catch (error) {
-      toast.error("Lỗi khi bắt đầu bảo dưỡng");
+      message.error("Lỗi khi bắt đầu bảo dưỡng");
     }
   };
 
   const handleComplete = async (ticketId, data) => {
     try {
       await completeMaintenance(ticketId, data);
-      toast.success("Hoàn thành bảo dưỡng thành công");
+      message.success("Hoàn thành bảo dưỡng thành công");
       fetchTickets();
     } catch (error) {
-      toast.error("Lỗi khi hoàn thành bảo dưỡng");
+      message.error("Lỗi khi hoàn thành bảo dưỡng");
     }
   };
 

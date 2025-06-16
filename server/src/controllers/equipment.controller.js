@@ -8,7 +8,7 @@ class EquipmentController {
   createEquipment = async (req, res, next) => {
     new CREATED({
       message: "Equipment created successfully!",
-      data: await EquipmentService.createEquipment(req.body),
+      data: await EquipmentService.createEquipment(req.body, req.user.userId),
     }).send(res);
   };
 

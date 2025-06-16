@@ -95,7 +95,6 @@ const settingsSchema = new Schema(
 );
 
 // Indexes for optimization
-settingsSchema.index({ key: 1 }, { unique: true });
 settingsSchema.index({ category: 1 });
 settingsSchema.index({ isPublic: 1 });
 settingsSchema.index({ isActive: 1 });

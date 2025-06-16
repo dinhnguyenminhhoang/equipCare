@@ -1,3 +1,5 @@
+import instance from "../config/instance";
+
 export const getEquipments = async (params = {}) => {
   const response = await instance.get("/equipment", { params });
   return response;
@@ -54,85 +56,4 @@ export const getRepairHistory = async (id, params = {}) => {
     params,
   });
   return response;
-};
-
-// src/services/maintenanceTicketService.js
-import instance from "../config/instance";
-
-export const getMaintenanceTickets = async (params = {}) => {
-  const response = await instance.get("/maintenance-tickets", {
-    params,
-  });
-  return response;
-};
-
-export const getMaintenanceTicketById = async (id) => {
-  const response = await instance.get(`/maintenance-tickets/${id}`);
-  return response.data;
-};
-
-export const createMaintenanceTicket = async (data) => {
-  const response = await instance.post("/maintenance-tickets", data);
-  return response.data;
-};
-
-export const updateMaintenanceTicket = async (id, data) => {
-  const response = await instance.put(`/maintenance-tickets/${id}`, data);
-  return response.data;
-};
-
-export const deleteMaintenanceTicket = async (id) => {
-  const response = await instance.delete(`/maintenance-tickets/${id}`);
-  return response.data;
-};
-
-export const approveMaintenanceTicket = async (id) => {
-  const response = await instance.patch(`/maintenance-tickets/${id}/approve`);
-  return response.data;
-};
-
-export const startMaintenance = async (id, data) => {
-  const response = await instance.patch(
-    `/maintenance-tickets/${id}/start`,
-    data
-  );
-  return response.data;
-};
-
-export const completeMaintenance = async (id, data) => {
-  const response = await instance.patch(
-    `/maintenance-tickets/${id}/complete`,
-    data
-  );
-  return response.data;
-};
-
-export const updateMaintenanceTask = async (ticketId, taskId, data) => {
-  const response = await instance.patch(
-    `/maintenance-tickets/${ticketId}/tasks/${taskId}`,
-    data
-  );
-  return response.data;
-};
-
-export const addMaterialToMaintenance = async (id, data) => {
-  const response = await instance.post(
-    `/maintenance-tickets/${id}/materials`,
-    data
-  );
-  return response.data;
-};
-
-export const getMaintenanceStatistics = async (params = {}) => {
-  const response = await instance.get("/maintenance-tickets/statistics", {
-    params,
-  });
-  return response.data;
-};
-
-export const exportMaintenanceReport = async (params = {}) => {
-  const response = await instance.get("/maintenance-tickets/export", {
-    params,
-  });
-  return response.data;
 };

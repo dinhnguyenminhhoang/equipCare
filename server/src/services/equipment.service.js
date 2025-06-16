@@ -5,9 +5,10 @@ const { RepairTicket } = require("../models/repairTicket.model");
 const { badRequestError, NotFoundError } = require("../core/error.response");
 const { paginate } = require("../utils/paginate");
 const { Equipment } = require("../models");
+const { upperCase } = require("lodash");
 
 class EquipmentService {
-  static createEquipment = async (payload) => {
+  static createEquipment = async (payload, userId) => {
     const {
       equipmentCode,
       name,
@@ -20,12 +21,12 @@ class EquipmentService {
       currentValue,
       specifications,
       location,
-      assignedTo,
       notes,
     } = payload;
 
-    // Kiểm tra mã thiết bị đã tồn tại
-    const existingEquipment = await Equipment.findOne({ equipmentCode });
+    const existingEquipment = await Equipment.findOne({
+      equipmentCode: upperCase(equipmentCode),
+    });
     if (existingEquipment) {
       throw new badRequestError("Equipment code already exists");
     }
@@ -42,7 +43,7 @@ class EquipmentService {
       currentValue,
       specifications,
       location,
-      assignedTo,
+      assignedTo: userId,
       notes,
       maintenance: {
         maintenanceInterval60h: true,

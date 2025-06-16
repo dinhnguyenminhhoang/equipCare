@@ -6,32 +6,32 @@ const { asyncHandler } = require("../helpers/asynchandler");
 const router = express.Router();
 
 router.get(
-  "/",
+  "/notifications",
   authentication,
   asyncHandler(notificationController.getNotifications)
 );
 router.get(
-  "/unread-count",
+  "/notifications/unread-count",
   authentication,
   asyncHandler(notificationController.getUnreadCount)
 );
 router.get(
-  "/:id",
+  "/notifications/:id",
   authentication,
   asyncHandler(notificationController.getNotificationById)
 );
 router.patch(
-  "/:id/read",
+  "/notifications/:id/read",
   authentication,
   asyncHandler(notificationController.markAsRead)
 );
 router.patch(
-  "/read-all",
+  "/notifications/read-all",
   authentication,
   asyncHandler(notificationController.markAllAsRead)
 );
 router.delete(
-  "/:id",
+  "/notifications/:id",
   authentication,
   asyncHandler(notificationController.deleteNotification)
 );
