@@ -22,6 +22,8 @@ import Select from "../../components/Common/Select/Select";
 import Table from "../../components/Common/Table/Table";
 import Modal from "../../components/Common/Modal/Modal";
 import { message } from "antd";
+import EquipmentForm from "../../components/EquipmentForm/EquipmentForm";
+import EquipmentDetailModal from "../../components/EquipmentDetailModal/EquipmentDetailModal";
 
 const Equipment = () => {
   const { isAdmin, isManager } = useAuth();
@@ -239,7 +241,6 @@ const Equipment = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Quản lý thiết bị</h1>
@@ -258,7 +259,6 @@ const Equipment = () => {
           </Button>
         )}
       </div>
-      {/* Statistics Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Tổng thiết bị"
@@ -349,7 +349,6 @@ const Equipment = () => {
           </Button>
         </div>
       </div>
-      {/* Equipment Table */}
       <div className="bg-white rounded-lg shadow">
         <Table
           columns={columns}
@@ -363,17 +362,16 @@ const Equipment = () => {
           }}
         />
       </div>
-      {/* Modals */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         title="Thêm thiết bị mới"
         size="lg"
       >
-        {/* <EquipmentForm
+        <EquipmentForm
           onSubmit={handleCreate}
           onCancel={() => setIsCreateModalOpen(false)}
-        /> */}
+        />
       </Modal>
       <Modal
         isOpen={isEditModalOpen}
@@ -384,23 +382,23 @@ const Equipment = () => {
         title="Chỉnh sửa thiết bị"
         size="lg"
       >
-        {/* <EquipmentForm
+        <EquipmentForm
           initialData={selectedEquipment}
           onSubmit={handleUpdate}
           onCancel={() => {
             setIsEditModalOpen(false);
             setSelectedEquipment(null);
           }}
-        /> */}
+        />
       </Modal>
-      {/* <EquipmentDetailModal
+      <EquipmentDetailModal
         equipment={selectedEquipment}
         isOpen={isDetailModalOpen}
         onClose={() => {
           setIsDetailModalOpen(false);
           setSelectedEquipment(null);
-        }} */}
-      {/* /> */}
+        }}
+      />
     </div>
   );
 };

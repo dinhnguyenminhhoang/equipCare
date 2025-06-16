@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dasshboard/Dasshboard";
 import Login from "./pages/Auth/Login/Login";
 import Register from "./pages/Auth/Register/Register";
 import Equipment from "./pages/Equipment/Equipment";
+import MaintenanceTickets from "./pages/MaintenanceTickets/MaintenanceTickets";
 const App = () => {
   const router = createBrowserRouter(
     createRoutesFromElements(
@@ -21,6 +22,7 @@ const App = () => {
           <Route index element={<Home />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/equipment" element={<Equipment />} />
+          <Route path="/maintenance-tickets" element={<MaintenanceTickets />} />
         </Route>
       </Route>
     )

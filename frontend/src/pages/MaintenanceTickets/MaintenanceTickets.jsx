@@ -1,31 +1,33 @@
-// src/pages/MaintenanceTickets/MaintenanceTickets.jsx
-import { useState, useEffect } from "react";
 import {
-  PlusIcon,
-  MagnifyingGlassIcon,
-  ClockIcon,
   CheckCircleIcon,
-  XCircleIcon,
-  PlayIcon,
+  ClockIcon,
   EyeIcon,
+  MagnifyingGlassIcon,
   PencilIcon,
+  PlayIcon,
+  PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { useAuth } from "../../contexts/AuthContext";
-import { Table, Button, Input, Select, Modal } from "../../components/Common";
-import StatsCard from "../../components/Dashboard/StatsCard";
-import MaintenanceTicketForm from "../../components/MaintenanceTickets/MaintenanceTicketForm";
-import MaintenanceTicketDetail from "../../components/MaintenanceTickets/MaintenanceTicketDetail";
-import {
-  getMaintenanceTickets,
-  createMaintenanceTicket,
-  updateMaintenanceTicket,
-  deleteMaintenanceTicket,
-  startMaintenance,
-  completeMaintenance,
-  approveMaintenanceTicket,
-} from "../../services/maintenanceTicketService";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import Button from "../../components/Common/Button/Button";
+import Input from "../../components/Common/Input/Input";
+import Modal from "../../components/Common/Modal/Modal";
+import Select from "../../components/Common/Select/Select";
+import Table from "../../components/Common/Table/Table";
+import StatsCard from "../../components/StatsCard/StatsCard";
+import MaintenanceTicketDetail from "../../components/MaintenanceTickets/MaintenanceTicketDetail";
+import MaintenanceTicketForm from "../../components/MaintenanceTickets/MaintenanceTicketForm";
+import { useAuth } from "../../context/AuthContext";
+import {
+  approveMaintenanceTicket,
+  completeMaintenance,
+  createMaintenanceTicket,
+  deleteMaintenanceTicket,
+  getMaintenanceTickets,
+  startMaintenance,
+  updateMaintenanceTicket,
+} from "../../services/maintenanceTicketService";
 
 const MaintenanceTickets = () => {
   const { isAdmin, isManager, user } = useAuth();
@@ -366,7 +368,6 @@ const MaintenanceTickets = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Phiếu bảo dưỡng</h1>
@@ -482,7 +483,6 @@ const MaintenanceTickets = () => {
         </div>
       </div>
 
-      {/* Tickets Table */}
       <div className="bg-white rounded-lg shadow">
         <Table
           columns={columns}
@@ -497,7 +497,6 @@ const MaintenanceTickets = () => {
         />
       </div>
 
-      {/* Modals */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}

@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-
+import { Select as SelectAnt } from "antd";
 const Select = forwardRef(
   (
     { label, error, options = [], className = "", value, onChange, ...props },
@@ -16,7 +16,7 @@ const Select = forwardRef(
           ref={ref}
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
-          className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+          className={`p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
             error
               ? "border-red-300 focus:border-red-500 focus:ring-red-500"
               : ""
