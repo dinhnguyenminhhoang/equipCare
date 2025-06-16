@@ -953,5 +953,152 @@ class DashboardService {
       inventoryTrends: costTrends,
     };
   };
+  static getProblematicEquipments = async (queryParams) => {
+    const { limit = 10, period = "6months" } = queryParams;
+
+    let monthsBack = 6;
+    if (period === "12months") monthsBack = 12;
+    if (period === "3months") monthsBack = 3;
+
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - monthsBack);
+
+    const [
+      frequentRepairEquipments,
+      highCostEquipments,
+      highDowntimeEquipments,
+    ] = await Promise.all([
+      RepairTicket.aggregate([
+        { $match: { isActive: true, reportedDate: { $gte: startDate } } },
+        {
+          $group: {
+            _id: "$equipment",
+            repairCount: { $sum: 1 },
+            totalCost: { $sum: "$costs.totalCost" },
+            totalDowntime: { $sum: "$downtime.totalDowntime" },
+            lastRepairDate: { $max: "$reportedDate" },
+            avgSeverity: {
+              $avg: {
+                $switch: {
+                  branches: [
+                    { case: { $eq: ["$severity", "CRITICAL"] }, then: 4 },
+                    { case: { $eq: ["$severity", "MAJOR"] }, then: 3 },
+                    { case: { $eq: ["$severity", "MODERATE"] }, then: 2 },
+                    { case: { $eq: ["$severity", "MINOR"] }, then: 1 },
+                  ],
+                  default: 1,
+                },
+              },
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: "equipments",
+            localField: "_id",
+            foreignField: "_id",
+            as: "equipment",
+          },
+        },
+        { $unwind: "$equipment" },
+        { $match: { "equipment.isActive": true } },
+        { $sort: { repairCount: -1 } },
+        { $limit: parseInt(limit) },
+      ]),
+      RepairTicket.aggregate([
+        {
+          $match: {
+            isActive: true,
+            reportedDate: { $gte: startDate },
+            status: "COMPLETED",
+          },
+        },
+        {
+          $group: {
+            _id: "$equipment",
+            totalCost: { $sum: "$costs.totalCost" },
+            repairCount: { $sum: 1 },
+            avgCostPerRepair: { $avg: "$costs.totalCost" },
+          },
+        },
+        {
+          $lookup: {
+            from: "equipments",
+            localField: "_id",
+            foreignField: "_id",
+            as: "equipment",
+          },
+        },
+        { $unwind: "$equipment" },
+        { $match: { "equipment.isActive": true } },
+        { $sort: { totalCost: -1 } },
+        { $limit: parseInt(limit) },
+      ]),
+      RepairTicket.aggregate([
+        {
+          $match: {
+            isActive: true,
+            reportedDate: { $gte: startDate },
+            status: "COMPLETED",
+          },
+        },
+        {
+          $group: {
+            _id: "$equipment",
+            totalDowntime: { $sum: "$downtime.totalDowntime" },
+            repairCount: { $sum: 1 },
+            avgDowntimePerRepair: { $avg: "$downtime.totalDowntime" },
+          },
+        },
+        {
+          $lookup: {
+            from: "equipments",
+            localField: "_id",
+            foreignField: "_id",
+            as: "equipment",
+          },
+        },
+        { $unwind: "$equipment" },
+        { $match: { "equipment.isActive": true } },
+        { $sort: { totalDowntime: -1 } },
+        { $limit: parseInt(limit) },
+      ]),
+    ]);
+
+    return {
+      frequentRepairEquipments: frequentRepairEquipments.map((item) => ({
+        equipmentId: item._id,
+        equipmentCode: item.equipment.equipmentCode,
+        equipmentName: item.equipment.name,
+        equipmentType: item.equipment.type,
+        repairCount: item.repairCount,
+        totalCost: item.totalCost || 0,
+        totalDowntime: item.totalDowntime || 0,
+        lastRepairDate: item.lastRepairDate,
+        avgSeverity: item.avgSeverity || 1,
+        status: item.equipment.status,
+      })),
+      highCostEquipments: highCostEquipments.map((item) => ({
+        equipmentId: item._id,
+        equipmentCode: item.equipment.equipmentCode,
+        equipmentName: item.equipment.name,
+        equipmentType: item.equipment.type,
+        totalCost: item.totalCost || 0,
+        repairCount: item.repairCount,
+        avgCostPerRepair: item.avgCostPerRepair || 0,
+        status: item.equipment.status,
+      })),
+      highDowntimeEquipments: highDowntimeEquipments.map((item) => ({
+        equipmentId: item._id,
+        equipmentCode: item.equipment.equipmentCode,
+        equipmentName: item.equipment.name,
+        equipmentType: item.equipment.type,
+        totalDowntime: item.totalDowntime || 0,
+        repairCount: item.repairCount,
+        avgDowntimePerRepair: item.avgDowntimePerRepair || 0,
+        status: item.equipment.status,
+      })),
+    };
+  };
 }
 module.exports = { DashboardService };

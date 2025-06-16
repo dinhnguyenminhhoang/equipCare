@@ -77,13 +77,12 @@ class DashboardController {
     }).send(res);
   });
 
-  // Top thiết bị có vấn đề
-  // getProblematicEquipments = asyncHandler(async (req, res, next) => {
-  //   new SuccessResponse({
-  //     message: "Get problematic equipments successfully!",
-  //     data: await DashboardService.getProblematicEquipments(req.query),
-  //   }).send(res);
-  // });
+  getProblematicEquipments = asyncHandler(async (req, res, next) => {
+    new SuccessResponse({
+      message: "Get problematic equipments successfully!",
+      data: await DashboardService.getProblematicEquipments(req.query),
+    }).send(res);
+  });
 }
 
 module.exports = new DashboardController();
