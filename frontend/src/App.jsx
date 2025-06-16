@@ -1,16 +1,27 @@
-import { useState } from "react";
-import "./App.css";
-import { DatePicker } from "antd";
-
-function App() {
-  const [count, setCount] = useState(0);
+import {
+  createBrowserRouter,
+  createRoutesFromElements,
+  Route,
+  RouterProvider,
+} from "react-router-dom";
+import Home from "./pages/Home/Home";
+import DefautLayout from "./layouts/DefautLayout/DefautLayout";
+const App = () => {
+  const router = createBrowserRouter(
+    createRoutesFromElements(
+      <Route path="/">
+        <Route element={<DefautLayout />}>
+          <Route index element={<Home />} />
+        </Route>
+      </Route>
+    )
+  );
 
   return (
-    <>
-      <h1 class="text-3xl font-bold underline">Hello world!</h1>
-      <DatePicker />
-    </>
+    <div className="App">
+      <RouterProvider router={router} />
+    </div>
   );
-}
+};
 
 export default App;
