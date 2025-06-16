@@ -1,0 +1,408 @@
+// src/pages/Equipment/Equipment.jsx
+import {
+  EyeIcon,
+  MagnifyingGlassIcon,
+  PencilIcon,
+  PlusIcon,
+  TrashIcon,
+  WrenchScrewdriverIcon,
+} from "@heroicons/react/24/outline";
+import { useEffect, useState } from "react";
+import {
+  createEquipment,
+  deleteEquipment,
+  getEquipments,
+  updateEquipment,
+} from "../../services/equipmentService";
+import { useAuth } from "../../context/AuthContext";
+import Button from "../../components/Common/Button/Button";
+import StatsCard from "../../components/StatsCard/StatsCard";
+import Input from "../../components/Common/Input/Input";
+import Select from "../../components/Common/Select/Select";
+import Table from "../../components/Common/Table/Table";
+import Modal from "../../components/Common/Modal/Modal";
+import { message } from "antd";
+
+const Equipment = () => {
+  const { isAdmin, isManager } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [equipments, setEquipments] = useState([]);
+  const [selectedEquipment, setSelectedEquipment] = useState(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  const [filters, setFilters] = useState({
+    search: "",
+    type: "",
+    status: "",
+    location: "",
+  });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+  });
+
+  useEffect(() => {
+    fetchEquipments();
+  }, [filters, pagination.page]);
+
+  const fetchEquipments = async () => {
+    try {
+      setLoading(true);
+      const response = await getEquipments({
+        page: pagination.page,
+        limit: pagination.limit,
+        search: filters.search,
+        type: filters.type,
+        status: filters.status,
+        location: filters.location,
+      });
+      setEquipments(response.data.data);
+      setPagination((prev) => ({ ...prev, total: response.data.meta.total }));
+    } catch (error) {
+      message.error("Lỗi khi tải danh sách thiết bị");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async (data) => {
+    try {
+      await createEquipment(data);
+      message.success("Tạo thiết bị thành công");
+      setIsCreateModalOpen(false);
+      fetchEquipments();
+    } catch (error) {
+      message.error("Lỗi khi tạo thiết bị");
+    }
+  };
+
+  const handleUpdate = async (data) => {
+    try {
+      await updateEquipment(selectedEquipment._id, data);
+      message.success("Cập nhật thiết bị thành công");
+      setIsEditModalOpen(false);
+      setSelectedEquipment(null);
+      fetchEquipments();
+    } catch (error) {
+      message.error("Lỗi khi cập nhật thiết bị");
+    }
+  };
+
+  const handleDelete = async (equipmentId) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa thiết bị này?")) {
+      try {
+        await deleteEquipment(equipmentId);
+        message.success("Xóa thiết bị thành công");
+        fetchEquipments();
+      } catch (error) {
+        message.error("Lỗi khi xóa thiết bị");
+      }
+    }
+  };
+
+  const getStatusColor = (status) => {
+    const statusColors = {
+      ACTIVE: "bg-green-100 text-green-800",
+      MAINTENANCE: "bg-yellow-100 text-yellow-800",
+      REPAIR: "bg-red-100 text-red-800",
+      INACTIVE: "bg-gray-100 text-gray-800",
+    };
+    return statusColors[status] || "bg-gray-100 text-gray-800";
+  };
+
+  const getStatusText = (status) => {
+    const statusText = {
+      ACTIVE: "Hoạt động",
+      MAINTENANCE: "Bảo dưỡng",
+      REPAIR: "Sửa chữa",
+      INACTIVE: "Ngừng hoạt động",
+    };
+    return statusText[status] || status;
+  };
+
+  const columns = [
+    {
+      key: "equipmentCode",
+      title: "Mã thiết bị",
+      render: (item) => (
+        <div className="font-medium text-gray-900">{item.equipmentCode}</div>
+      ),
+    },
+    {
+      key: "name",
+      title: "Tên thiết bị",
+      render: (item) => (
+        <div>
+          <div className="font-medium text-gray-900">{item.name}</div>
+          <div className="text-sm text-gray-500">{item.model}</div>
+        </div>
+      ),
+    },
+    {
+      key: "type",
+      title: "Loại thiết bị",
+      render: (item) => (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          {item.type}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      title: "Trạng thái",
+      render: (item) => (
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+            item.status
+          )}`}
+        >
+          {getStatusText(item.status)}
+        </span>
+      ),
+    },
+    {
+      key: "operatingHours",
+      title: "Giờ hoạt động",
+      render: (item) => (
+        <div className="text-sm text-gray-900">{item.operatingHours || 0}h</div>
+      ),
+    },
+    {
+      key: "location",
+      title: "Vị trí",
+      render: (item) => (
+        <div className="text-sm text-gray-900">{item.location || "-"}</div>
+      ),
+    },
+    {
+      key: "actions",
+      title: "Thao tác",
+      render: (item) => (
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSelectedEquipment(item);
+              setIsDetailModalOpen(true);
+            }}
+          >
+            <EyeIcon className="w-4 h-4" />
+          </Button>
+          {(isAdmin() || isManager()) && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedEquipment(item);
+                  setIsEditModalOpen(true);
+                }}
+              >
+                <PencilIcon className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleDelete(item._id)}
+                className="text-red-600 hover:text-red-900"
+              >
+                <TrashIcon className="w-4 h-4" />
+              </Button>
+            </>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  const equipmentTypes = [
+    { value: "", label: "Tất cả loại thiết bị" },
+    { value: "CRANE", label: "Cẩu" },
+    { value: "FORKLIFT", label: "Xe nâng" },
+    { value: "TRACTOR", label: "Đầu kéo" },
+    { value: "TRUCK", label: "Xe tải" },
+    { value: "EXCAVATOR", label: "Máy xúc" },
+    { value: "OTHER", label: "Khác" },
+  ];
+
+  const equipmentStatuses = [
+    { value: "", label: "Tất cả trạng thái" },
+    { value: "ACTIVE", label: "Hoạt động" },
+    { value: "MAINTENANCE", label: "Bảo dưỡng" },
+    { value: "REPAIR", label: "Sửa chữa" },
+    { value: "INACTIVE", label: "Ngừng hoạt động" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Quản lý thiết bị</h1>
+          <p className="mt-2 text-gray-600">
+            Quản lý thông tin thiết bị, theo dõi trạng thái và lịch bảo dưỡng
+          </p>
+        </div>
+        {(isAdmin() || isManager()) && (
+          <Button
+            variant="primary"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center"
+          >
+            <PlusIcon className="w-4 h-4 mr-2" />
+            Thêm thiết bị
+          </Button>
+        )}
+      </div>
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <StatsCard
+          title="Tổng thiết bị"
+          value={pagination.total}
+          icon={WrenchScrewdriverIcon}
+          color="blue"
+        />
+        <StatsCard
+          title="Đang hoạt động"
+          value={equipments.filter((e) => e.status === "ACTIVE").length}
+          icon={WrenchScrewdriverIcon}
+          color="green"
+        />
+        <StatsCard
+          title="Đang bảo dưỡng"
+          value={equipments.filter((e) => e.status === "MAINTENANCE").length}
+          icon={WrenchScrewdriverIcon}
+          color="yellow"
+        />
+        <StatsCard
+          title="Cần sửa chữa"
+          value={equipments.filter((e) => e.status === "REPAIR").length}
+          icon={WrenchScrewdriverIcon}
+          color="red"
+        />
+      </div>
+      {/* Filters */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tìm kiếm
+            </label>
+            <Input
+              placeholder="Tìm theo mã, tên thiết bị..."
+              value={filters.search}
+              onChange={(e) =>
+                setFilters({ ...filters, search: e.target.value })
+              }
+              icon={MagnifyingGlassIcon}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Loại thiết bị
+            </label>
+            <Select
+              options={equipmentTypes}
+              value={filters.type}
+              onChange={(value) => setFilters({ ...filters, type: value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Trạng thái
+            </label>
+            <Select
+              options={equipmentStatuses}
+              value={filters.status}
+              onChange={(value) => setFilters({ ...filters, status: value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Vị trí
+            </label>
+            <Input
+              placeholder="Nhập vị trí..."
+              value={filters.location}
+              onChange={(e) =>
+                setFilters({ ...filters, location: e.target.value })
+              }
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <Button
+            variant="secondary"
+            onClick={() =>
+              setFilters({ search: "", type: "", status: "", location: "" })
+            }
+          >
+            Xóa bộ lọc
+          </Button>
+        </div>
+      </div>
+      {/* Equipment Table */}
+      <div className="bg-white rounded-lg shadow">
+        <Table
+          columns={columns}
+          data={equipments}
+          loading={loading}
+          pagination={{
+            current: pagination.page,
+            pageSize: pagination.limit,
+            total: pagination.total,
+            onChange: (page) => setPagination({ ...pagination, page }),
+          }}
+        />
+      </div>
+      {/* Modals */}
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Thêm thiết bị mới"
+        size="lg"
+      >
+        {/* <EquipmentForm
+          onSubmit={handleCreate}
+          onCancel={() => setIsCreateModalOpen(false)}
+        /> */}
+      </Modal>
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedEquipment(null);
+        }}
+        title="Chỉnh sửa thiết bị"
+        size="lg"
+      >
+        {/* <EquipmentForm
+          initialData={selectedEquipment}
+          onSubmit={handleUpdate}
+          onCancel={() => {
+            setIsEditModalOpen(false);
+            setSelectedEquipment(null);
+          }}
+        /> */}
+      </Modal>
+      {/* <EquipmentDetailModal
+        equipment={selectedEquipment}
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedEquipment(null);
+        }} */}
+      {/* /> */}
+    </div>
+  );
+};
+
+export default Equipment;

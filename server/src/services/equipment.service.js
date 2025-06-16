@@ -1,10 +1,10 @@
 "use strict";
 
-const { Equipment } = require("../models/equipment.model");
 const { MaintenanceTicket } = require("../models/maintenanceTicket.model");
 const { RepairTicket } = require("../models/repairTicket.model");
 const { badRequestError, NotFoundError } = require("../core/error.response");
 const { paginate } = require("../utils/paginate");
+const { Equipment } = require("../models");
 
 class EquipmentService {
   static createEquipment = async (payload) => {
@@ -65,7 +65,6 @@ class EquipmentService {
       sortBy = "createdAt",
       sortOrder = "desc",
     } = queryParams;
-
     const filters = {};
 
     if (type) filters.type = type;
@@ -347,4 +346,4 @@ class EquipmentService {
   };
 }
 
-module.exports = EquipmentService;
+module.exports = { EquipmentService };

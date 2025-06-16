@@ -227,7 +227,6 @@ const workOrderSchema = new Schema(
 );
 
 // Indexes for optimization
-workOrderSchema.index({ workOrderCode: 1 }, { unique: true });
 workOrderSchema.index({ category: 1 });
 workOrderSchema.index({ type: 1 });
 workOrderSchema.index({ skillLevel: 1 });

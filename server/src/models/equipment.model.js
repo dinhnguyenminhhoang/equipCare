@@ -117,7 +117,6 @@ equipmentSchema.index({ type: 1 });
 equipmentSchema.index({ status: 1 });
 equipmentSchema.index({ suppliedDate: 1 });
 equipmentSchema.index({ operatingHours: 1 });
-equipmentSchema.index({ "maintenance.nextMaintenanceDate": 1 });
 equipmentSchema.index({ assignedTo: 1 });
 equipmentSchema.index({ isActive: 1 });
 

@@ -1,59 +1,58 @@
 "use strict";
 const express = require("express");
 const { authentication, adminAuthentication } = require("../auth/authUtils");
-const equipmentController = require("../controllers/equipment.controller");
 const { asyncHandler } = require("../helpers/asynchandler");
+const equipmentController = require("../controllers/equipment.controller");
 const router = express.Router();
-// Public routes (with authentication)
 router.get(
-  "/",
+  "/equipment",
   authentication,
   asyncHandler(equipmentController.getEquipments)
 );
 router.get(
-  "/statistics",
+  "/equipment/statistics",
   authentication,
   asyncHandler(equipmentController.getEquipmentStatistics)
 );
 router.get(
-  "/due-maintenance",
+  "/equipment/due-maintenance",
   authentication,
   asyncHandler(equipmentController.getEquipmentsDueForMaintenance)
 );
 router.get(
-  "/:id",
+  "/equipment/:id",
   authentication,
   asyncHandler(equipmentController.getEquipmentById)
 );
 router.get(
-  "/:id/maintenance-history",
+  "/equipment/:id/maintenance-history",
   authentication,
   asyncHandler(equipmentController.getMaintenanceHistory)
 );
 router.get(
-  "/:id/repair-history",
+  "/equipment/:id/repair-history",
   authentication,
   asyncHandler(equipmentController.getRepairHistory)
 );
 
 // Admin routes
 router.post(
-  "/",
+  "/equipment",
   adminAuthentication,
   asyncHandler(equipmentController.createEquipment)
 );
 router.put(
-  "/:id",
+  "/equipment/:id",
   adminAuthentication,
   asyncHandler(equipmentController.updateEquipment)
 );
 router.delete(
-  "/:id",
+  "/equipment/:id",
   adminAuthentication,
   asyncHandler(equipmentController.deleteEquipment)
 );
 router.patch(
-  "/:id/operating-hours",
+  "/equipment/:id/operating-hours",
   authentication,
   asyncHandler(equipmentController.updateOperatingHours)
 );
