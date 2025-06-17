@@ -13,6 +13,7 @@ import Equipment from "./pages/Equipment/Equipment";
 import MaintenanceLevels from "./pages/MaintenanceLevels/MaintenanceLevels";
 import MaintenanceTickets from "./pages/MaintenanceTickets/MaintenanceTickets";
 import Materials from "./pages/Materials/Materials";
+import RepairTickets from "./pages/RepairTickets/RepairTickets";
 const App = () => {
   const router = createBrowserRouter(
     createRoutesFromElements(
@@ -25,6 +26,7 @@ const App = () => {
           <Route path="/maintenance-tickets" element={<MaintenanceTickets />} />
           <Route path="/maintenance-levels" element={<MaintenanceLevels />} />
           <Route path="/materials" element={<Materials />} />
+          <Route path="/repair-tickets" element={<RepairTickets />} />
         </Route>
       </Route>
     )
