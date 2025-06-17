@@ -10,14 +10,17 @@ import {
   PencilIcon,
   TrashIcon,
   ArrowUpIcon,
-  ArrowDownIcon,
 } from "@heroicons/react/24/outline";
-import { useAuth } from "../../contexts/AuthContext";
-import { Table, Button, Input, Select, Modal } from "../../components/Common";
-import StatsCard from "../../components/Dashboard/StatsCard";
-import MaterialForm from "../../components/Materials/MaterialForm";
-import MaterialDetailModal from "../../components/Materials/MaterialDetailModal";
-import StockUpdateModal from "../../components/Materials/StockUpdateModal";
+import { useAuth } from "../../context/AuthContext";
+import Button from "../../components/Common/Button/Button";
+import Input from "../../components/Common/Input/Input";
+import Select from "../../components/Common/Select/Select";
+import Table from "../../components/Common/Table/Table";
+import Modal from "../../components/Common/Modal/Modal";
+import StatsCard from "../../components/StatsCard/StatsCard";
+import MaterialForm from "../../components/MaterialForm/MaterialForm";
+import MaterialDetailModal from "../../components/MaterialDetailModal/MaterialDetailModal";
+import StockUpdateModal from "../../components/StockUpdateModal/StockUpdateModal";
 import {
   getMaterials,
   createMaterial,
@@ -26,7 +29,7 @@ import {
   updateStock,
   getMaterialStatistics,
 } from "../../services/materialService";
-import { toast } from "react-toastify";
+import { message } from "antd";
 
 const Materials = () => {
   const { isAdmin, isManager } = useAuth();
@@ -70,10 +73,10 @@ const Materials = () => {
         lowStock: filters.lowStock,
         expiring: filters.expiring,
       });
-      setMaterials(response.data);
-      setPagination((prev) => ({ ...prev, total: response.meta.total }));
+      setMaterials(response.data.data || []);
+      setPagination((prev) => ({ ...prev, total: response.data.meta.total }));
     } catch (error) {
-      toast.error("Lỗi khi tải danh sách vật tư");
+      message.error("Lỗi khi tải danh sách vật tư");
     } finally {
       setLoading(false);
     }
@@ -91,25 +94,25 @@ const Materials = () => {
   const handleCreate = async (data) => {
     try {
       await createMaterial(data);
-      toast.success("Tạo vật tư thành công");
+      message.success("Tạo vật tư thành công");
       setIsCreateModalOpen(false);
       fetchMaterials();
       fetchStatistics();
     } catch (error) {
-      toast.error("Lỗi khi tạo vật tư");
+      message.error("Lỗi khi tạo vật tư");
     }
   };
 
   const handleUpdate = async (data) => {
     try {
       await updateMaterial(selectedMaterial._id, data);
-      toast.success("Cập nhật vật tư thành công");
+      message.success("Cập nhật vật tư thành công");
       setIsEditModalOpen(false);
       setSelectedMaterial(null);
       fetchMaterials();
       fetchStatistics();
     } catch (error) {
-      toast.error("Lỗi khi cập nhật vật tư");
+      message.error("Lỗi khi cập nhật vật tư");
     }
   };
 
@@ -117,11 +120,11 @@ const Materials = () => {
     if (window.confirm("Bạn có chắc chắn muốn xóa vật tư này?")) {
       try {
         await deleteMaterial(materialId);
-        toast.success("Xóa vật tư thành công");
+        message.success("Xóa vật tư thành công");
         fetchMaterials();
         fetchStatistics();
       } catch (error) {
-        toast.error("Lỗi khi xóa vật tư");
+        message.error("Lỗi khi xóa vật tư");
       }
     }
   };
@@ -129,13 +132,13 @@ const Materials = () => {
   const handleStockUpdate = async (data) => {
     try {
       await updateStock(selectedMaterial._id, data);
-      toast.success("Cập nhật tồn kho thành công");
+      message.success("Cập nhật tồn kho thành công");
       setIsStockModalOpen(false);
       setSelectedMaterial(null);
       fetchMaterials();
       fetchStatistics();
     } catch (error) {
-      toast.error("Lỗi khi cập nhật tồn kho");
+      message.error("Lỗi khi cập nhật tồn kho");
     }
   };
 
@@ -182,7 +185,9 @@ const Materials = () => {
       render: (item) => (
         <div>
           <div className="font-medium text-gray-900">{item.name}</div>
-          <div className="text-sm text-gray-500">{item.description}</div>
+          <div className="text-sm text-gray-500 truncate max-w-xs">
+            {item.description}
+          </div>
         </div>
       ),
     },
@@ -319,7 +324,7 @@ const Materials = () => {
     { value: "FILTER", label: "Bộ lọc" },
     { value: "BRAKE_PAD", label: "Má phanh" },
     { value: "TIRE", label: "Lốp xe" },
-    { value: "SPARE_PART", label: "Phụ tồn" },
+    { value: "SPARE_PART", label: "Phụ tùng" },
     { value: "LUBRICANT", label: "Chất bôi trơn" },
     { value: "COOLANT", label: "Chất làm mát" },
     { value: "BELT", label: "Dây đai" },

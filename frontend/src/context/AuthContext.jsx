@@ -29,7 +29,6 @@ export const AuthProvider = ({ children }) => {
         setToken(storedToken);
       } catch (error) {
         console.error("Error parsing user data from cookie:", error);
-        // Clear invalid cookies
         Cookies.remove("user");
         Cookies.remove("token");
         Cookies.remove("userId");
@@ -51,9 +50,9 @@ export const AuthProvider = ({ children }) => {
 
         // Set cookies with options
         const cookieOptions = {
-          expires: 7, // 7 days
-          secure: process.env.NODE_ENV === "production", // Only secure in production
-          sameSite: "strict", // CSRF protection
+          expires: 7,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "strict",
         };
 
         Cookies.set("user", JSON.stringify(user), cookieOptions);
@@ -76,7 +75,6 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setToken(null);
 
-    // Remove cookies
     Cookies.remove("user");
     Cookies.remove("token");
     Cookies.remove("userId");

@@ -74,7 +74,6 @@ const MaintenanceTicketForm = ({ initialData, onSubmit, onCancel }) => {
         getMaintenanceLevels({ limit: 100 }),
         getUsers({ limit: 100, roles: "TECHNICIAN,MANAGER" }),
       ]);
-      console.log("Equipment data:", equipmentRes);
       setEquipments(equipmentRes.data?.data || []);
       setMaintenanceLevels(levelRes.data?.data || []);
       setUsers(userRes.data?.data || []);
