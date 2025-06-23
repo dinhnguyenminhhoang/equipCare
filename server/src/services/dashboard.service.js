@@ -62,17 +62,17 @@ class DashboardService {
         reportedDate: { $gte: lastMonth, $lt: thisMonth },
       }),
       Equipment.countDocuments({
-        isActive: true,
+        isActive: true,// Replace with actual data
         "maintenance.nextMaintenanceDate": { $lt: today },
       }),
       MaintenanceTicket.countDocuments({
         isActive: true,
         status: "PENDING",
-      }) +
-        RepairTicket.countDocuments({
-          isActive: true,
-          status: "PENDING",
-        }),
+      }),
+      RepairTicket.countDocuments({
+        isActive: true,
+        status: "PENDING",
+      }),
       Equipment.aggregate([
         { $match: { isActive: true } },
         { $group: { _id: "$status", count: { $sum: 1 } } },

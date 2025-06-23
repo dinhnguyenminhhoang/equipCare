@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Tabs } from "antd";
+import { Tabs, message, Tooltip, Modal as AntModal } from "antd";
 import {
   CalendarIcon,
   CogIcon,
@@ -13,14 +13,27 @@ import {
   XMarkIcon,
   PlayIcon,
   PauseIcon,
+  PlusIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import Button from "../Common/Button/Button";
 import Modal from "../Common/Modal/Modal";
+import AddMaterialModal from "../AddMaterialModal/AddMaterialModal";
+import AddExternalServiceModal from "../AddExternalServiceModal/AddExternalServiceModal";
+import {
+  addMaterialToRepair,
+  addExternalService,
+} from "../../services/repairTicketService";
+import { useAuth } from "../../context/AuthContext";
 
 const { TabPane } = Tabs;
+const { confirm } = AntModal;
 
-const RepairTicketDetailModal = ({ ticket, isOpen, onClose }) => {
+const RepairTicketDetailModal = ({ ticket, isOpen, onClose, onRefresh }) => {
+  const { isAdmin, isManager, user } = useAuth();
   const [activeTab, setActiveTab] = useState("info");
+  const [isAddMaterialModalOpen, setIsAddMaterialModalOpen] = useState(false);
+  const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -153,6 +166,75 @@ const RepairTicketDetailModal = ({ ticket, isOpen, onClose }) => {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const handleAddMaterial = async (materialData) => {
+    try {
+      await addMaterialToRepair(ticket._id, materialData);
+      message.success("Thêm vật tư thành công");
+      setIsAddMaterialModalOpen(false);
+      onRefresh && onRefresh();
+    } catch (error) {
+      message.error("Lỗi khi thêm vật tư");
+      throw error;
+    }
+  };
+
+  const handleAddExternalService = async (serviceData) => {
+    try {
+      await addExternalService(ticket._id, serviceData);
+      message.success("Thêm dịch vụ bên ngoài thành công");
+      setIsAddServiceModalOpen(false);
+      onRefresh && onRefresh();
+    } catch (error) {
+      message.error("Lỗi khi thêm dịch vụ bên ngoài");
+      throw error;
+    }
+  };
+
+  const handleRemoveMaterial = (materialIndex, materialName) => {
+    confirm({
+      title: "Xác nhận xóa",
+      content: `Bạn có chắc chắn muốn xóa vật tư "${materialName}"?`,
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: () => {
+        // TODO: Implement remove material API
+        message.info(
+          "Tính năng xóa vật tư sẽ được cập nhật trong phiên bản tiếp theo"
+        );
+      },
+    });
+  };
+
+  const handleRemoveService = (serviceIndex, serviceName) => {
+    confirm({
+      title: "Xác nhận xóa",
+      content: `Bạn có chắc chắn muốn xóa dịch vụ "${serviceName}"?`,
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: () => {
+        message.info(
+          "Tính năng xóa dịch vụ sẽ được cập nhật trong phiên bản tiếp theo"
+        );
+      },
+    });
+  };
+
+  const canAddMaterials = () => {
+    return (
+      ticket?.status === "IN_PROGRESS" &&
+      (ticket?.assignedTo?._id === user?.userId || isAdmin() || isManager())
+    );
+  };
+
+  const canAddServices = () => {
+    return (
+      ticket?.status === "IN_PROGRESS" &&
+      (ticket?.assignedTo?._id === user?.userId || isAdmin() || isManager())
+    );
   };
 
   const InfoItem = ({
@@ -352,9 +434,16 @@ const RepairTicketDetailModal = ({ ticket, isOpen, onClose }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h4 className="text-lg font-medium text-gray-900">Vật tư đã sử dụng</h4>
-        <Button size="sm" variant="outline">
-          Thêm vật tư
-        </Button>
+        {canAddMaterials() && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setIsAddMaterialModalOpen(true)}
+          >
+            <PlusIcon className="w-4 h-4 mr-1" />
+            Thêm vật tư
+          </Button>
+        )}
       </div>
 
       {ticket?.materialsUsed?.length > 0 ? (
@@ -398,6 +487,20 @@ const RepairTicketDetailModal = ({ ticket, isOpen, onClose }) => {
                     </div>
                   </div>
                 </div>
+                {canAddMaterials() && (
+                  <Tooltip title="Xóa vật tư">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        handleRemoveMaterial(index, material.material?.name)
+                      }
+                      className="text-red-600 hover:text-red-900 ml-2"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </Button>
+                  </Tooltip>
+                )}
               </div>
             </div>
           ))}
@@ -406,6 +509,17 @@ const RepairTicketDetailModal = ({ ticket, isOpen, onClose }) => {
         <div className="text-center py-12">
           <CogIcon className="mx-auto h-12 w-12 text-gray-400" />
           <p className="mt-2 text-sm text-gray-500">Chưa sử dụng vật tư nào</p>
+          {canAddMaterials() && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => setIsAddMaterialModalOpen(true)}
+            >
+              <PlusIcon className="w-4 h-4 mr-1" />
+              Thêm vật tư đầu tiên
+            </Button>
+          )}
         </div>
       )}
     </div>
@@ -480,6 +594,21 @@ const RepairTicketDetailModal = ({ ticket, isOpen, onClose }) => {
 
       {ticket?.externalServices?.length > 0 && (
         <InfoSection title="Dịch vụ bên ngoài">
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-base font-medium text-gray-900">
+              Danh sách dịch vụ
+            </span>
+            {canAddServices() && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsAddServiceModalOpen(true)}
+              >
+                <PlusIcon className="w-4 h-4 mr-1" />
+                Thêm dịch vụ
+              </Button>
+            )}
+          </div>
           <div className="space-y-4">
             {ticket.externalServices.map((service, index) => (
               <div
@@ -504,9 +633,43 @@ const RepairTicketDetailModal = ({ ticket, isOpen, onClose }) => {
                       {formatDate(service.serviceDate)}
                     </p>
                   </div>
+                  {canAddServices() && (
+                    <Tooltip title="Xóa dịch vụ">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          handleRemoveService(index, service.serviceName)
+                        }
+                        className="text-red-600 hover:text-red-900 ml-2"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </Button>
+                    </Tooltip>
+                  )}
                 </div>
               </div>
             ))}
+          </div>
+        </InfoSection>
+      )}
+
+      {!ticket?.externalServices?.length && canAddServices() && (
+        <InfoSection title="Dịch vụ bên ngoài">
+          <div className="text-center py-8">
+            <CurrencyDollarIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <p className="mt-2 text-sm text-gray-500">
+              Chưa có dịch vụ bên ngoài nào
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => setIsAddServiceModalOpen(true)}
+            >
+              <PlusIcon className="w-4 h-4 mr-1" />
+              Thêm dịch vụ đầu tiên
+            </Button>
           </div>
         </InfoSection>
       )}
@@ -516,107 +679,122 @@ const RepairTicketDetailModal = ({ ticket, isOpen, onClose }) => {
   if (!ticket) return null;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={
-        <div className="flex items-center space-x-3">
-          <WrenchScrewdriverIcon className="w-6 h-6 text-red-600" />
-          <div>
-            <h3 className="text-lg font-medium text-gray-900">
-              Chi tiết phiếu sửa chữa: {ticket.ticketNumber}
-            </h3>
-            <p className="text-sm text-gray-500">
-              {ticket.equipment?.equipmentCode} - {ticket.equipment?.name}
-            </p>
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={
+          <div className="flex items-center space-x-3">
+            <WrenchScrewdriverIcon className="w-6 h-6 text-red-600" />
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">
+                Chi tiết phiếu sửa chữa: {ticket.ticketNumber}
+              </h3>
+              <p className="text-sm text-gray-500">
+                {ticket.equipment?.equipmentCode} - {ticket.equipment?.name}
+              </p>
+            </div>
           </div>
+        }
+        size="full"
+        footer={
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-gray-500">
+              Cập nhật lần cuối: {formatDateTime(ticket.updatedAt)}
+            </div>
+            <div className="flex space-x-2">
+              <Button onClick={onClose} variant="secondary">
+                Đóng
+              </Button>
+            </div>
+          </div>
+        }
+      >
+        <div className="max-h-[75vh] overflow-y-auto">
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            className="repair-ticket-detail-tabs"
+            size="large"
+          >
+            <TabPane
+              tab={
+                <span className="flex items-center space-x-2">
+                  <DocumentTextIcon className="w-4 h-4" />
+                  <span>Thông tin cơ bản</span>
+                </span>
+              }
+              key="info"
+            >
+              <div className="py-4">
+                <BasicInfoTab />
+              </div>
+            </TabPane>
+
+            <TabPane
+              tab={
+                <span className="flex items-center space-x-2">
+                  <ExclamationCircleIcon className="w-4 h-4" />
+                  <span>Vấn đề & Giải pháp</span>
+                </span>
+              }
+              key="problem"
+            >
+              <div className="py-4">
+                <ProblemTab />
+              </div>
+            </TabPane>
+
+            <TabPane
+              tab={
+                <span className="flex items-center space-x-2">
+                  <CogIcon className="w-4 h-4" />
+                  <span>Vật tư sử dụng</span>
+                  {ticket.materialsUsed?.length > 0 && (
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+                      {ticket.materialsUsed.length}
+                    </span>
+                  )}
+                </span>
+              }
+              key="materials"
+            >
+              <div className="py-4">
+                <MaterialsTab />
+              </div>
+            </TabPane>
+
+            <TabPane
+              tab={
+                <span className="flex items-center space-x-2">
+                  <CurrencyDollarIcon className="w-4 h-4" />
+                  <span>Chi phí</span>
+                </span>
+              }
+              key="cost"
+            >
+              <div className="py-4">
+                <CostTab />
+              </div>
+            </TabPane>
+          </Tabs>
         </div>
-      }
-      size="full"
-      footer={
-        <div className="flex justify-between items-center">
-          <div className="text-sm text-gray-500">
-            Cập nhật lần cuối: {formatDateTime(ticket.updatedAt)}
-          </div>
-          <div className="flex space-x-2">
-            <Button onClick={onClose} variant="secondary">
-              Đóng
-            </Button>
-            <Button variant="primary">Chỉnh sửa</Button>
-          </div>
-        </div>
-      }
-    >
-      <div className="max-h-[75vh] overflow-y-auto">
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          className="repair-ticket-detail-tabs"
-          size="large"
-        >
-          <TabPane
-            tab={
-              <span className="flex items-center space-x-2">
-                <DocumentTextIcon className="w-4 h-4" />
-                <span>Thông tin cơ bản</span>
-              </span>
-            }
-            key="info"
-          >
-            <div className="py-4">
-              <BasicInfoTab />
-            </div>
-          </TabPane>
+      </Modal>
 
-          <TabPane
-            tab={
-              <span className="flex items-center space-x-2">
-                <ExclamationCircleIcon className="w-4 h-4" />
-                <span>Vấn đề & Giải pháp</span>
-              </span>
-            }
-            key="problem"
-          >
-            <div className="py-4">
-              <ProblemTab />
-            </div>
-          </TabPane>
+      <AddMaterialModal
+        isOpen={isAddMaterialModalOpen}
+        onClose={() => setIsAddMaterialModalOpen(false)}
+        onSubmit={handleAddMaterial}
+        ticketId={ticket._id}
+      />
 
-          <TabPane
-            tab={
-              <span className="flex items-center space-x-2">
-                <CogIcon className="w-4 h-4" />
-                <span>Vật tư sử dụng</span>
-                {ticket.materialsUsed?.length > 0 && (
-                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
-                    {ticket.materialsUsed.length}
-                  </span>
-                )}
-              </span>
-            }
-            key="materials"
-          >
-            <div className="py-4">
-              <MaterialsTab />
-            </div>
-          </TabPane>
-
-          <TabPane
-            tab={
-              <span className="flex items-center space-x-2">
-                <CurrencyDollarIcon className="w-4 h-4" />
-                <span>Chi phí</span>
-              </span>
-            }
-            key="cost"
-          >
-            <div className="py-4">
-              <CostTab />
-            </div>
-          </TabPane>
-        </Tabs>
-      </div>
-    </Modal>
+      <AddExternalServiceModal
+        isOpen={isAddServiceModalOpen}
+        onClose={() => setIsAddServiceModalOpen(false)}
+        onSubmit={handleAddExternalService}
+        ticketId={ticket._id}
+      />
+    </>
   );
 };
 

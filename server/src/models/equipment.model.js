@@ -111,6 +111,82 @@ const equipmentSchema = new Schema(
   },
   { timestamps: true, collection: EQUIPMENT_COLLECTION_NAME }
 );
+equipmentSchema.methods.calculateNextMaintenance = function () {
+  const { operatingHours, maintenance } = this;
+  const lastMaintenanceHours = maintenance?.lastMaintenanceHours || 0;
+  const intervals = maintenance?.maintenanceIntervals || [
+    60, 120, 240, 480, 960,
+  ];
+
+  for (let interval of intervals) {
+    const nextMilestone =
+      Math.ceil((lastMaintenanceHours + interval) / interval) * interval;
+    if (nextMilestone > operatingHours) {
+      this.maintenance.nextMaintenanceHours = nextMilestone;
+
+      // Ước tính ngày bảo dưỡng (giả sử 8h/ngày làm việc)
+      const hoursRemaining = nextMilestone - operatingHours;
+      const daysRemaining = Math.ceil(hoursRemaining / 8);
+      const nextDate = new Date();
+      nextDate.setDate(nextDate.getDate() + daysRemaining);
+      this.maintenance.nextMaintenanceDate = nextDate;
+      break;
+    }
+  }
+};
+equipmentSchema.pre("save", function (next) {
+  if (
+    this.isModified("operatingHours") ||
+    this.isModified("maintenance.lastMaintenanceHours")
+  ) {
+    this.calculateNextMaintenance();
+  }
+  next();
+});
+
+// Virtual để kiểm tra có cần bảo dưỡng không
+equipmentSchema.virtual("isMaintenanceDue").get(function () {
+  const { operatingHours, maintenance } = this;
+  const lastMaintenanceHours = maintenance?.lastMaintenanceHours || 0;
+  const nextMaintenanceHours = maintenance?.nextMaintenanceHours;
+
+  if (lastMaintenanceHours && operatingHours >= nextMaintenanceHours) {
+    return true;
+  }
+
+  // Kiểm tra theo ngày
+  if (maintenance?.nextMaintenanceDate) {
+    return new Date() >= new Date(maintenance.nextMaintenanceDate);
+  }
+
+  return false;
+});
+
+// Virtual để tính mức độ khẩn cấp
+equipmentSchema.virtual("maintenanceUrgency").get(function () {
+  if (!this.isMaintenanceDue) return "normal";
+
+  const { operatingHours, maintenance } = this;
+  const nextMaintenanceHours = maintenance?.nextMaintenanceHours || 0;
+  const overdueHours = operatingHours - nextMaintenanceHours;
+
+  if (overdueHours > 48) return "critical";
+  if (overdueHours > 24) return "high";
+  if (overdueHours > 0) return "medium";
+
+  // Kiểm tra theo ngày
+  if (maintenance?.nextMaintenanceDate) {
+    const overdueDays = Math.ceil(
+      (new Date() - new Date(maintenance.nextMaintenanceDate)) /
+        (1000 * 60 * 60 * 24)
+    );
+    if (overdueDays > 7) return "critical";
+    if (overdueDays > 3) return "high";
+    if (overdueDays > 0) return "medium";
+  }
+
+  return "low";
+});
 
 // Indexes for optimization
 equipmentSchema.index({ type: 1 });

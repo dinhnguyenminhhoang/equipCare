@@ -77,17 +77,15 @@ const Login = () => {
         email: formData.email,
         password: formData.password,
       });
-
-      if (result.success) {
-        // Save remember me preference
-        if (formData.rememberMe) {
-          localStorage.setItem("rememberMe", "true");
-        }
-
-        // Redirect to intended page or dashboard
-        const from = location.state?.from?.pathname || "/";
-        navigate(from, { replace: true });
-      }
+      // if (result.success && result.roles) {
+      //   if (formData.rememberMe) {
+      //     localStorage.setItem("rememberMe", "true");
+      //   }
+      //   const from = result.roles.includes("ADMIN")
+      //     ? "/dashboard"
+      //     : location.state?.from?.pathname || "/";
+      //   navigate(from, { replace: true });
+      // }
     } catch (error) {
       console.error("Login failed:", error);
     } finally {
@@ -211,15 +209,6 @@ const Login = () => {
                 >
                   Ghi nhớ đăng nhập
                 </label>
-              </div>
-
-              <div className="text-sm">
-                <Link
-                  to="/auth/forgot-password"
-                  className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
-                >
-                  Quên mật khẩu?
-                </Link>
               </div>
             </div>
 

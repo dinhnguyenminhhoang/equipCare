@@ -4,9 +4,36 @@ const { authentication, adminAuthentication } = require("../auth/authUtils");
 const userController = require("../controllers/user.controller");
 const { asyncHandler } = require("../helpers/asynchandler");
 const router = express.Router();
-
-// Admin routes for user management
-router.get("/users", adminAuthentication, asyncHandler(userController.getUsers));
+//history
+router.get(
+  "/users/history",
+  authentication,
+  asyncHandler(userController.getHistory)
+);
+router.get(
+  "/users",
+  adminAuthentication,
+  asyncHandler(userController.getUsers)
+);
+router.get(
+  "/users/technicians",
+  asyncHandler(userController.getUsersTechnicians)
+);
+router.post(
+  "/users",
+  adminAuthentication,
+  asyncHandler(userController.createUser)
+);
+router.post(
+  "/users/:id/reset-password",
+  adminAuthentication,
+  asyncHandler(userController.resetUserPassword)
+);
+router.get(
+  "/users/statistics",
+  adminAuthentication,
+  asyncHandler(userController.getUserStatistics)
+);
 router.get(
   "/users/:id",
   adminAuthentication,

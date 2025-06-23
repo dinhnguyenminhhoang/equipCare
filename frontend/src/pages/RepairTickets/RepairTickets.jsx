@@ -1,41 +1,46 @@
-import { useState, useEffect } from "react";
 import {
-  PlusIcon,
-  MagnifyingGlassIcon,
-  ExclamationTriangleIcon,
-  WrenchScrewdriverIcon,
-  ClockIcon,
-  EyeIcon,
-  PencilIcon,
-  TrashIcon,
   CheckCircleIcon,
-  XMarkIcon,
+  ClockIcon,
+  DocumentArrowDownIcon,
+  ExclamationTriangleIcon,
+  EyeIcon,
+  MagnifyingGlassIcon,
+  PencilIcon,
   PlayIcon,
+  PlusIcon,
+  PrinterIcon,
+  TrashIcon,
+  WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
-import { useAuth } from "../../context/AuthContext";
+import { Modal as AntModal, message, Tooltip } from "antd";
+import { useEffect, useState } from "react";
 import Button from "../../components/Common/Button/Button";
 import Input from "../../components/Common/Input/Input";
+import Modal from "../../components/Common/Modal/Modal";
 import Select from "../../components/Common/Select/Select";
 import Table from "../../components/Common/Table/Table";
-import Modal from "../../components/Common/Modal/Modal";
-import StatsCard from "../../components/StatsCard/StatsCard";
-import RepairTicketForm from "../../components/RepairTicketForm/RepairTicketForm";
+import ExportReportModal from "../../components/ExportReportModal/ExportReportModal";
+import InvoiceHTML from "../../components/InvoiceHTML/InvoiceHTML";
 import RepairTicketDetailModal from "../../components/RepairTicketDetailModal/RepairTicketDetailModal";
-import {
-  getRepairTickets,
-  createRepairTicket,
-  updateRepairTicket,
-  deleteRepairTicket,
-  getRepairStatistics,
-  approveRepairTicket,
-  startRepair,
-  completeRepair,
-  diagnoseIssue,
-} from "../../services/repairTicketService";
+import RepairTicketForm from "../../components/RepairTicketForm/RepairTicketForm";
+import StatsCard from "../../components/StatsCard/StatsCard";
+import { useAuth } from "../../context/AuthContext";
 import { getEquipments } from "../../services/equipmentService";
+import {
+  approveRepairTicket,
+  completeRepair,
+  createRepairTicket,
+  deleteRepairTicket,
+  exportRepairReport,
+  getRepairStatistics,
+  getRepairTickets,
+  startRepair,
+  updateRepairTicket,
+} from "../../services/repairTicketService";
 import { getUsers } from "../../services/userService";
-import { message, Tooltip, Modal as AntModal } from "antd";
+import { formatCurrency } from "../../utils";
 const { confirm } = AntModal;
+
 const RepairTickets = () => {
   const { isAdmin, isManager, user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -47,6 +52,9 @@ const RepairTickets = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const [filters, setFilters] = useState({
     search: "",
@@ -122,6 +130,27 @@ const RepairTickets = () => {
     }
   };
 
+  const refreshTicketDetail = async () => {
+    if (selectedTicket) {
+      try {
+        // Fetch updated ticket data
+        const response = await getRepairTickets({
+          page: 1,
+          limit: 1,
+          search: selectedTicket.ticketNumber,
+        });
+        if (response.data.data.length > 0) {
+          setSelectedTicket(response.data.data[0]);
+        }
+      } catch (error) {
+        console.error("Error refreshing ticket detail:", error);
+      }
+    }
+    // Also refresh the main list
+    fetchTickets();
+    fetchStatistics();
+  };
+
   const handleCreate = async (data) => {
     try {
       await createRepairTicket(data);
@@ -146,10 +175,11 @@ const RepairTickets = () => {
       message.error("Lỗi khi cập nhật phiếu sửa chữa");
     }
   };
+
   const handleDelete = async (ticketId, ticketNumber) => {
     confirm({
       title: "Xác nhận xóa",
-      icon: <ExclamationCircleIcon className="w-6 h-6 text-red-500" />,
+      icon: <ExclamationTriangleIcon className="w-6 h-6 text-red-500" />,
       content: (
         <div>
           <p>
@@ -178,6 +208,201 @@ const RepairTickets = () => {
     });
   };
 
+  const handleExportReport = async () => {
+    setIsExportModalOpen(true);
+  };
+
+  const handleExportWithOptions = async (exportParams) => {
+    try {
+      setIsExporting(true);
+
+      const response = await exportRepairReport(exportParams);
+
+      if (response && response.data) {
+        // Tạo file theo format được chọn
+        if (exportParams.format === "json") {
+          downloadJSON(
+            response,
+            `repair-report-${new Date().toISOString().split("T")[0]}.json`
+          );
+        } else {
+          const csvContent = convertToCSV(response.data);
+          downloadCSV(
+            csvContent,
+            `repair-report-${new Date().toISOString().split("T")[0]}.csv`
+          );
+        }
+
+        message.success(
+          `Xuất báo cáo thành công! Tổng ${
+            response.summary?.totalTickets || 0
+          } phiếu sửa chữa`
+        );
+      } else {
+        throw new Error("No data received");
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+      message.error("Lỗi khi xuất báo cáo");
+      throw error;
+    } finally {
+      setIsExporting(false);
+    }
+  };
+  const convertNumberToWords = (number) => {
+    if (!number || number === 0) return "Không";
+    const millions = Math.floor(number / 1000000);
+    const thousands = Math.floor((number % 1000000) / 1000);
+    const hundreds = number % 1000;
+
+    let result = "";
+
+    if (millions > 0) {
+      result += millions + " triệu ";
+    }
+    if (thousands > 0) {
+      result += thousands + " nghìn ";
+    }
+    if (hundreds > 0) {
+      result += hundreds + " ";
+    }
+
+    return result.trim();
+  };
+  // Helper function to download JSON
+  const downloadJSON = (data, filename) => {
+    const jsonContent = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonContent], {
+      type: "application/json;charset=utf-8;",
+    });
+    const link = document.createElement("a");
+
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  // Helper function to convert data to CSV
+  const convertToCSV = (data) => {
+    if (!data || data.length === 0) {
+      return "Không có dữ liệu để xuất";
+    }
+
+    // CSV Headers (tiếng Việt)
+    const headers = [
+      "Số phiếu",
+      "Mã thiết bị",
+      "Tên thiết bị",
+      "Loại sửa chữa",
+      "Trạng thái",
+      "Mức độ ưu tiên",
+      "Loại hỏng hóc",
+      "Mức độ nghiêm trọng",
+      "Người báo cáo",
+      "Người thực hiện",
+      "Mô tả vấn đề",
+      "Nguyên nhân gốc",
+      "Ngày báo cáo",
+      "Ngày bắt đầu",
+      "Ngày hoàn thành",
+      "Chi phí (VNĐ)",
+      "Thời gian dừng máy (giờ)",
+    ];
+
+    // Convert data to CSV rows
+    const rows = data.map((item) => [
+      item.ticketNumber || "",
+      item.equipmentCode || "",
+      item.equipmentName || "",
+      getTypeText(item.type),
+      getStatusText(item.status),
+      getPriorityText(item.priority),
+      getFailureTypeText(item.failureType),
+      getSeverityText(item.severity),
+      item.requestedBy || "",
+      item.assignedTo || "",
+      `"${(item.problemDescription || "").replace(/"/g, '""')}"`, // Escape quotes
+      `"${(item.rootCause || "").replace(/"/g, '""')}"`,
+      item.reportedDate
+        ? new Date(item.reportedDate).toLocaleDateString("vi-VN")
+        : "",
+      item.actualStartDate
+        ? new Date(item.actualStartDate).toLocaleDateString("vi-VN")
+        : "",
+      item.actualEndDate
+        ? new Date(item.actualEndDate).toLocaleDateString("vi-VN")
+        : "",
+      item.totalCost || 0,
+      item.downtime || 0,
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [headers, ...rows]
+      .map((row) => row.join(","))
+      .join("\n");
+
+    // Add BOM for UTF-8 support in Excel
+    return "\uFEFF" + csvContent;
+  };
+
+  // Helper function to download CSV
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const getTypeText = (type) => {
+    const typeText = {
+      BREAKDOWN: "Hỏng hóc",
+      CORRECTIVE: "Khắc phục",
+      EMERGENCY: "Khẩn cấp",
+      WARRANTY: "Bảo hành",
+      OVERHAUL: "Đại tu",
+    };
+    return typeText[type] || type;
+  };
+
+  const getFailureTypeText = (failureType) => {
+    const failureTypeText = {
+      MECHANICAL: "Cơ khí",
+      ELECTRICAL: "Điện",
+      HYDRAULIC: "Thủy lực",
+      ENGINE: "Động cơ",
+      TRANSMISSION: "Hộp số",
+      BRAKE_SYSTEM: "Hệ thống phanh",
+      COOLING_SYSTEM: "Hệ thống làm mát",
+      FUEL_SYSTEM: "Hệ thống nhiên liệu",
+      COMPUTER_SYSTEM: "Hệ thống máy tính",
+      OTHER: "Khác",
+    };
+    return failureTypeText[failureType] || failureType;
+  };
+
+  const getSeverityText = (severity) => {
+    const severityText = {
+      MINOR: "Nhỏ",
+      MODERATE: "Vừa",
+      MAJOR: "Lớn",
+      CRITICAL: "Nghiêm trọng",
+    };
+    return severityText[severity] || severity;
+  };
   const handleApprove = async (ticketId, ticketNumber) => {
     confirm({
       title: "Xác nhận phê duyệt",
@@ -223,6 +448,7 @@ const RepairTickets = () => {
   const getStatusColor = (status) => {
     const statusColors = {
       PENDING: "bg-yellow-100 text-yellow-800",
+      APPROVED: "bg-blue-100 text-blue-800", // Thêm trạng thái APPROVED
       DIAGNOSED: "bg-purple-100 text-purple-800",
       IN_PROGRESS: "bg-blue-100 text-blue-800",
       COMPLETED: "bg-green-100 text-green-800",
@@ -235,6 +461,7 @@ const RepairTickets = () => {
   const getStatusText = (status) => {
     const statusText = {
       PENDING: "Chờ xử lý",
+      APPROVED: "Đã phê duyệt",
       DIAGNOSED: "Đã chẩn đoán",
       IN_PROGRESS: "Đang sửa chữa",
       COMPLETED: "Hoàn thành",
@@ -263,18 +490,93 @@ const RepairTickets = () => {
     };
     return priorityText[priority] || priority;
   };
+  const handlePrintInvoice = async (ticket) => {
+    try {
+      setIsPrinting(true);
+      const invoiceHTML = generateInvoiceHTML(ticket);
+      const printWindow = window.open("", "_blank");
+      printWindow.document.write(invoiceHTML);
+      printWindow.document.close();
 
-  const formatCurrency = (amount) => {
-    if (!amount || amount === 0) return "0 VNĐ";
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(amount);
+      printWindow.onload = () => {
+        printWindow.print();
+        printWindow.onafterprint = () => {
+          printWindow.close();
+        };
+      };
+
+      message.success("Đang chuẩn bị in hóa đơn...");
+    } catch (error) {
+      message.error("Lỗi khi in hóa đơn");
+      console.error("Print error:", error);
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const generateInvoiceHTML = (ticket) => {
+    const currentDate = new Date().toLocaleDateString("vi-VN");
+    const invoiceNumber = `HD-${ticket.ticketNumber}`;
+
+    return InvoiceHTML({
+      ticket,
+      currentDate,
+      invoiceNumber,
+      getStatusText,
+      getTypeText,
+      getPriorityText,
+      formatDate,
+      convertNumberToWords,
+    });
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("vi-VN");
+  };
+
+  const canPrintInvoice = (item) => {
+    return item.status === "COMPLETED" && item.costs?.totalCost > 0;
+  };
+
+  const canApprove = (item) => {
+    return item.status === "PENDING" && (isAdmin() || isManager());
+  };
+
+  const canStart = (item) => {
+    return (
+      (item.status === "APPROVED" || item.status === "DIAGNOSED") &&
+      (item.assignedTo?._id === user?.userId || isAdmin() || isManager())
+    );
+  };
+
+  const canComplete = (item) => {
+    return (
+      item.status === "IN_PROGRESS" &&
+      (item.assignedTo?._id === user?.userId || isAdmin() || isManager())
+    );
+  };
+
+  const canEdit = (item) => {
+    return (
+      item.status !== "COMPLETED" &&
+      item.status !== "CANCELLED" &&
+      (isAdmin() || isManager() || item.requestedBy?._id === user?.userId)
+    );
+  };
+
+  const canDelete = (item) => {
+    return (
+      item.status === "PENDING" &&
+      (isAdmin() || isManager() || item.requestedBy?._id === user?.userId)
+    );
+  };
+
+  const canDiagnose = (item) => {
+    return (
+      (item.status === "APPROVED" || item.status === "PENDING") &&
+      (item.assignedTo?._id === user?.userId || isAdmin() || isManager())
+    );
   };
 
   const columns = [
@@ -373,7 +675,7 @@ const RepairTickets = () => {
       title: "Thao tác",
       render: (item) => (
         <div className="flex items-center space-x-2">
-          {/* View Details */}
+          {/* View Details - Always visible */}
           <Tooltip title="Xem chi tiết">
             <Button
               variant="ghost"
@@ -387,8 +689,20 @@ const RepairTickets = () => {
             </Button>
           </Tooltip>
 
-          {/* Approve Button - Only for PENDING status and Admin/Manager */}
-          {item.status === "PENDING" && (isAdmin() || isManager()) && (
+          {canPrintInvoice(item) && (
+            <Tooltip title="In hóa đơn">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handlePrintInvoice(item)}
+                disabled={isPrinting}
+                className="text-purple-600 hover:text-purple-900"
+              >
+                <PrinterIcon className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+          )}
+          {canApprove(item) && (
             <Tooltip title="Phê duyệt phiếu sửa chữa">
               <Button
                 variant="ghost"
@@ -401,115 +715,84 @@ const RepairTickets = () => {
             </Tooltip>
           )}
 
-          {/* Start Repair Button - For PENDING/DIAGNOSED status */}
-          {(item.status === "PENDING" || item.status === "DIAGNOSED") &&
-            (item.assignedTo?._id === user?.userId ||
-              isAdmin() ||
-              isManager()) && (
-              <Tooltip title="Bắt đầu sửa chữa">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleStartRepair(item._id, item.ticketNumber)}
-                  className="text-blue-600 hover:text-blue-900"
-                >
-                  <PlayIcon className="w-4 h-4" />
-                </Button>
-              </Tooltip>
-            )}
-
-          {(isAdmin() ||
-            isManager() ||
-            item.requestedBy?._id === user?.userId) && (
-            <>
-              <Tooltip title="Chỉnh sửa phiếu sửa chữa">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedTicket(item);
-                    setIsEditModalOpen(true);
-                  }}
-                >
-                  <PencilIcon className="w-4 h-4" />
-                </Button>
-              </Tooltip>
-
-              {/* Delete Button - Only for PENDING status */}
-              {item.status === "PENDING" && (
-                <Tooltip title="Xóa phiếu sửa chữa">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(item._id, item.ticketNumber)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                  </Button>
-                </Tooltip>
-              )}
-            </>
+          {canStart(item) && (
+            <Tooltip title="Bắt đầu sửa chữa">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleStartRepair(item._id, item.ticketNumber)}
+                className="text-blue-600 hover:text-blue-900"
+              >
+                <PlayIcon className="w-4 h-4" />
+              </Button>
+            </Tooltip>
           )}
 
-          {/* Complete Repair Button - For IN_PROGRESS status */}
-          {item.status === "IN_PROGRESS" &&
-            (item.assignedTo?._id === user?.userId ||
-              isAdmin() ||
-              isManager()) && (
-              <Tooltip title="Hoàn thành sửa chữa">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    confirm({
-                      title: "Hoàn thành sửa chữa",
-                      icon: (
-                        <CheckCircleIcon className="w-6 h-6 text-green-500" />
-                      ),
-                      content: `Bạn có chắc chắn đã hoàn thành sửa chữa phiếu ${item.ticketNumber}?`,
-                      okText: "Hoàn thành",
-                      okType: "primary",
-                      cancelText: "Hủy",
-                      centered: true,
-                      onOk: async () => {
-                        try {
-                          await completeRepair(item._id, {
-                            completionNotes: "Đã hoàn thành sửa chữa",
-                          });
-                          message.success("Hoàn thành sửa chữa thành công");
-                          fetchTickets();
-                        } catch (error) {
-                          message.error("Lỗi khi hoàn thành sửa chữa");
-                        }
-                      },
-                    });
-                  }}
-                  className="text-green-600 hover:text-green-900"
-                >
-                  <CheckCircleIcon className="w-4 h-4" />
-                </Button>
-              </Tooltip>
-            )}
+          {canComplete(item) && (
+            <Tooltip title="Hoàn thành sửa chữa">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  confirm({
+                    title: "Hoàn thành sửa chữa",
+                    icon: (
+                      <CheckCircleIcon className="w-6 h-6 text-green-500" />
+                    ),
+                    content: `Bạn có chắc chắn đã hoàn thành sửa chữa phiếu ${item.ticketNumber}?`,
+                    okText: "Hoàn thành",
+                    okType: "primary",
+                    cancelText: "Hủy",
+                    centered: true,
+                    onOk: async () => {
+                      try {
+                        await completeRepair(item._id, {
+                          completionNotes: "Đã hoàn thành sửa chữa",
+                        });
+                        message.success("Hoàn thành sửa chữa thành công");
+                        fetchTickets();
+                      } catch (error) {
+                        message.error("Lỗi khi hoàn thành sửa chữa");
+                      }
+                    },
+                  });
+                }}
+                className="text-green-600 hover:text-green-900"
+              >
+                <CheckCircleIcon className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+          )}
 
-          {/* Diagnose Button - For PENDING status */}
-          {item.status === "PENDING" &&
-            (item.assignedTo?._id === user?.userId ||
-              isAdmin() ||
-              isManager()) && (
-              <Tooltip title="Chẩn đoán sự cố">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    // Open diagnosis modal or form
-                    message.info("Tính năng chẩn đoán đang được phát triển");
-                  }}
-                  className="text-purple-600 hover:text-purple-900"
-                >
-                  <WrenchScrewdriverIcon className="w-4 h-4" />
-                </Button>
-              </Tooltip>
-            )}
+          {/* Edit Button - Only when not completed/cancelled */}
+          {canEdit(item) && (
+            <Tooltip title="Chỉnh sửa phiếu sửa chữa">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedTicket(item);
+                  setIsEditModalOpen(true);
+                }}
+              >
+                <PencilIcon className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+          )}
+
+          {/* Delete Button - Only for PENDING status */}
+          {canDelete(item) && (
+            <Tooltip title="Xóa phiếu sửa chữa">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleDelete(item._id, item.ticketNumber)}
+                className="text-red-600 hover:text-red-900"
+              >
+                <TrashIcon className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+          )}
         </div>
       ),
     },
@@ -527,6 +810,7 @@ const RepairTickets = () => {
   const repairStatuses = [
     { value: "", label: "Tất cả trạng thái" },
     { value: "PENDING", label: "Chờ xử lý" },
+    { value: "APPROVED", label: "Đã phê duyệt" }, // Thêm APPROVED
     { value: "DIAGNOSED", label: "Đã chẩn đoán" },
     { value: "IN_PROGRESS", label: "Đang sửa chữa" },
     { value: "COMPLETED", label: "Hoàn thành" },
@@ -576,14 +860,29 @@ const RepairTickets = () => {
             Quản lý phiếu sửa chữa thiết bị và theo dõi tiến độ
           </p>
         </div>
-        <Button
-          variant="primary"
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center"
-        >
-          <PlusIcon className="w-4 h-4 mr-2" />
-          Tạo phiếu sửa chữa
-        </Button>
+        {isAdmin() && isManager() ? (
+          <>
+            <div className="flex space-x-3">
+              <Button
+                variant="outline"
+                onClick={handleExportReport}
+                disabled={isExporting}
+                className="flex items-center"
+              >
+                <DocumentArrowDownIcon className="w-4 h-4 mr-2" />
+                Xuất báo cáo
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => setIsCreateModalOpen(true)}
+                className="flex items-center"
+              >
+                <PlusIcon className="w-4 h-4 mr-2" />
+                Tạo phiếu sửa chữa
+              </Button>
+            </div>
+          </>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -612,6 +911,7 @@ const RepairTickets = () => {
           color="green"
         />
       </div>
+
       <div className="bg-white p-6 rounded-lg shadow">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
@@ -775,6 +1075,15 @@ const RepairTickets = () => {
           setIsDetailModalOpen(false);
           setSelectedTicket(null);
         }}
+        onRefresh={refreshTicketDetail}
+      />
+
+      {/* Export Report Modal */}
+      <ExportReportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        onExport={handleExportWithOptions}
+        currentFilters={filters}
       />
     </div>
   );

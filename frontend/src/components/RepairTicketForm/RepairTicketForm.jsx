@@ -152,7 +152,6 @@ const RepairTicketForm = ({
       }));
     }
 
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -398,7 +397,6 @@ const RepairTicketForm = ({
         </div>
       </div>
 
-      {/* Schedule */}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Thời gian</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -412,7 +410,6 @@ const RepairTicketForm = ({
         </div>
       </div>
 
-      {/* Problem Description */}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Mô tả vấn đề</h3>
         <div className="space-y-4">

@@ -9,6 +9,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
+import { message, Tooltip, Modal as AntModal } from "antd"; // Import thêm Tooltip và Modal từ Ant Design
 import Button from "../../components/Common/Button/Button";
 import Input from "../../components/Common/Input/Input";
 import Modal from "../../components/Common/Modal/Modal";
@@ -27,7 +28,17 @@ import {
 } from "../../services/maintenanceTicketService";
 import MaintenanceTicketDetail from "../../components/MaintenanceTicketDetail/MaintenanceTicketDetail";
 import MaintenanceTicketForm from "../../components/MaintenanceTicketForm/MaintenanceTicketForm";
-import { message } from "antd";
+import {
+  getPriorityColor,
+  getPriorityText,
+  getStatusColor,
+  getStatusText,
+  ticketPriorities,
+  ticketStatuses,
+  ticketTypes,
+} from "../../utils/const";
+
+const { confirm } = AntModal;
 
 const MaintenanceTickets = () => {
   const { isAdmin, isManager, user } = useAuth();
@@ -100,36 +111,127 @@ const MaintenanceTickets = () => {
     }
   };
 
-  const handleDelete = async (ticketId) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa phiếu bảo dưỡng này?")) {
-      try {
-        await deleteMaintenanceTicket(ticketId);
-        message.success("Xóa phiếu bảo dưỡng thành công");
-        fetchTickets();
-      } catch (error) {
-        message.error("Lỗi khi xóa phiếu bảo dưỡng");
-      }
-    }
+  // ✅ Enhanced delete với Ant Design confirm
+  const handleDelete = async (ticket) => {
+    confirm({
+      title: "Xác nhận xóa phiếu bảo dưỡng",
+      content: (
+        <div>
+          <p>Bạn có chắc chắn muốn xóa phiếu bảo dưỡng này không?</p>
+          <div className="mt-2 p-3 bg-gray-50 rounded">
+            <p>
+              <strong>Mã phiếu:</strong> {ticket.ticketNumber}
+            </p>
+            <p>
+              <strong>Thiết bị:</strong> {ticket.equipment?.name}
+            </p>
+            <p>
+              <strong>Loại:</strong> {ticket.type}
+            </p>
+          </div>
+          <p className="mt-2 text-red-600 text-sm">
+            <strong>Lưu ý:</strong> Hành động này không thể hoàn tác!
+          </p>
+        </div>
+      ),
+      icon: <TrashIcon className="w-6 h-6 text-red-500" />,
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          await deleteMaintenanceTicket(ticket._id);
+          message.success("Xóa phiếu bảo dưỡng thành công");
+          fetchTickets();
+        } catch (error) {
+          message.error("Lỗi khi xóa phiếu bảo dưỡng");
+        }
+      },
+    });
   };
 
-  const handleApprove = async (ticketId) => {
-    try {
-      await approveMaintenanceTicket(ticketId);
-      message.success("Phê duyệt phiếu bảo dưỡng thành công");
-      fetchTickets();
-    } catch (error) {
-      message.error("Lỗi khi phê duyệt phiếu bảo dưỡng");
-    }
+  // ✅ Enhanced approve với confirm
+  const handleApprove = async (ticket) => {
+    confirm({
+      title: "Phê duyệt phiếu bảo dưỡng",
+      content: (
+        <div>
+          <p>Bạn có muốn phê duyệt phiếu bảo dưỡng này không?</p>
+          <div className="mt-2 p-3 bg-blue-50 rounded">
+            <p>
+              <strong>Mã phiếu:</strong> {ticket.ticketNumber}
+            </p>
+            <p>
+              <strong>Thiết bị:</strong> {ticket.equipment?.name}
+            </p>
+            <p>
+              <strong>Người yêu cầu:</strong> {ticket.requestedBy?.username}
+            </p>
+            <p>
+              <strong>Độ ưu tiên:</strong> {getPriorityText(ticket.priority)}
+            </p>
+          </div>
+        </div>
+      ),
+      icon: <CheckCircleIcon className="w-6 h-6 text-green-500" />,
+      okText: "Phê duyệt",
+      okType: "primary",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          await approveMaintenanceTicket(ticket._id);
+          message.success("Phê duyệt phiếu bảo dưỡng thành công");
+          fetchTickets();
+        } catch (error) {
+          message.error("Lỗi khi phê duyệt phiếu bảo dưỡng");
+        }
+      },
+    });
   };
 
-  const handleStart = async (ticketId, data) => {
-    try {
-      await startMaintenance(ticketId, data);
-      message.success("Bắt đầu bảo dưỡng thành công");
-      fetchTickets();
-    } catch (error) {
-      message.error("Lỗi khi bắt đầu bảo dưỡng");
-    }
+  // ✅ Enhanced start với confirm
+  const handleStart = async (ticket) => {
+    confirm({
+      title: "Bắt đầu thực hiện bảo dưỡng",
+      content: (
+        <div>
+          <p>Bạn có muốn bắt đầu thực hiện bảo dưỡng cho thiết bị này không?</p>
+          <div className="mt-2 p-3 bg-blue-50 rounded">
+            <p>
+              <strong>Mã phiếu:</strong> {ticket.ticketNumber}
+            </p>
+            <p>
+              <strong>Thiết bị:</strong> {ticket.equipment?.name}
+            </p>
+            <p>
+              <strong>Loại bảo dưỡng:</strong> {ticket.type}
+            </p>
+            <p>
+              <strong>Ngày dự kiến:</strong>{" "}
+              {ticket.scheduledDate
+                ? new Date(ticket.scheduledDate).toLocaleDateString("vi-VN")
+                : "Chưa xác định"}
+            </p>
+          </div>
+          <p className="mt-2 text-blue-600 text-sm">
+            Thời gian bắt đầu sẽ được ghi nhận từ thời điểm hiện tại.
+          </p>
+        </div>
+      ),
+      icon: <PlayIcon className="w-6 h-6 text-blue-500" />,
+      okText: "Bắt đầu",
+      okType: "primary",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          await startMaintenance(ticket._id, {});
+          message.success("Bắt đầu bảo dưỡng thành công");
+          fetchTickets();
+        } catch (error) {
+          message.error("Lỗi khi bắt đầu bảo dưỡng");
+        }
+      },
+    });
   };
 
   const handleComplete = async (ticketId, data) => {
@@ -140,48 +242,6 @@ const MaintenanceTickets = () => {
     } catch (error) {
       message.error("Lỗi khi hoàn thành bảo dưỡng");
     }
-  };
-
-  const getStatusColor = (status) => {
-    const statusColors = {
-      PENDING: "bg-yellow-100 text-yellow-800",
-      IN_PROGRESS: "bg-blue-100 text-blue-800",
-      COMPLETED: "bg-green-100 text-green-800",
-      CANCELLED: "bg-red-100 text-red-800",
-      ON_HOLD: "bg-gray-100 text-gray-800",
-    };
-    return statusColors[status] || "bg-gray-100 text-gray-800";
-  };
-
-  const getStatusText = (status) => {
-    const statusText = {
-      PENDING: "Chờ xử lý",
-      IN_PROGRESS: "Đang thực hiện",
-      COMPLETED: "Hoàn thành",
-      CANCELLED: "Đã hủy",
-      ON_HOLD: "Tạm dừng",
-    };
-    return statusText[status] || status;
-  };
-
-  const getPriorityColor = (priority) => {
-    const priorityColors = {
-      LOW: "bg-gray-100 text-gray-800",
-      MEDIUM: "bg-blue-100 text-blue-800",
-      HIGH: "bg-orange-100 text-orange-800",
-      CRITICAL: "bg-red-100 text-red-800",
-    };
-    return priorityColors[priority] || "bg-gray-100 text-gray-800";
-  };
-
-  const getPriorityText = (priority) => {
-    const priorityText = {
-      LOW: "Thấp",
-      MEDIUM: "Trung bình",
-      HIGH: "Cao",
-      CRITICAL: "Khẩn cấp",
-    };
-    return priorityText[priority] || priority;
   };
 
   const canEditTicket = (ticket) => {
@@ -198,6 +258,28 @@ const MaintenanceTickets = () => {
       (isAdmin() || isManager() || ticket.requestedBy._id === user._id) &&
       ticket.status === "PENDING"
     );
+  };
+
+  // ✅ Helper function để lấy tooltip text
+  const getActionTooltip = (action, ticket) => {
+    switch (action) {
+      case "view":
+        return "Xem chi tiết phiếu bảo dưỡng";
+      case "approve":
+        return "Phê duyệt phiếu bảo dưỡng";
+      case "start":
+        return "Bắt đầu thực hiện bảo dưỡng";
+      case "edit":
+        return ticket.status === "COMPLETED"
+          ? "Không thể chỉnh sửa phiếu đã hoàn thành"
+          : "Chỉnh sửa phiếu bảo dưỡng";
+      case "delete":
+        return ticket.status !== "PENDING"
+          ? "Chỉ có thể xóa phiếu ở trạng thái chờ xử lý"
+          : "Xóa phiếu bảo dưỡng";
+      default:
+        return "";
+    }
   };
 
   const columns = [
@@ -280,90 +362,91 @@ const MaintenanceTickets = () => {
       title: "Thao tác",
       render: (item) => (
         <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setSelectedTicket(item);
-              setIsDetailModalOpen(true);
-            }}
-          >
-            <EyeIcon className="w-4 h-4" />
-          </Button>
-
-          {item.status === "PENDING" && isManager() && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleApprove(item._id)}
-              className="text-green-600 hover:text-green-900"
-            >
-              <CheckCircleIcon className="w-4 h-4" />
-            </Button>
-          )}
-
-          {item.status === "PENDING" && item.assignedTo?._id === user._id && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleStart(item._id, {})}
-              className="text-blue-600 hover:text-blue-900"
-            >
-              <PlayIcon className="w-4 h-4" />
-            </Button>
-          )}
-
-          {canEditTicket(item) && item.status !== "COMPLETED" && (
+          {/* ✅ View Action với Tooltip */}
+          <Tooltip title={getActionTooltip("view", item)} placement="top">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
                 setSelectedTicket(item);
-                setIsEditModalOpen(true);
+                setIsDetailModalOpen(true);
               }}
             >
-              <PencilIcon className="w-4 h-4" />
+              <EyeIcon className="w-4 h-4" />
             </Button>
+          </Tooltip>
+
+          {/* ✅ Approve Action với Tooltip */}
+          {item.status === "PENDING" && isManager() && (
+            <Tooltip title={getActionTooltip("approve", item)} placement="top">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleApprove(item)}
+                className="text-green-600 hover:text-green-900"
+              >
+                <CheckCircleIcon className="w-4 h-4" />
+              </Button>
+            </Tooltip>
           )}
 
-          {canDeleteTicket(item) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDelete(item._id)}
-              className="text-red-600 hover:text-red-900"
-            >
-              <TrashIcon className="w-4 h-4" />
-            </Button>
+          {/* ✅ Start Action với Tooltip */}
+          {item.status === "APPROVED" && item.assignedTo?._id === user._id && (
+            <Tooltip title={getActionTooltip("start", item)} placement="top">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleStart(item)}
+                className="text-blue-600 hover:text-blue-900"
+              >
+                <PlayIcon className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+          )}
+
+          {/* ✅ Edit Action với Tooltip */}
+          {canEditTicket(item) && (
+            <Tooltip title={getActionTooltip("edit", item)} placement="top">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={item.status === "COMPLETED"}
+                onClick={() => {
+                  setSelectedTicket(item);
+                  setIsEditModalOpen(true);
+                }}
+                className={
+                  item.status === "COMPLETED"
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }
+              >
+                <PencilIcon className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+          )}
+
+          {/* ✅ Delete Action với Tooltip */}
+          {(isAdmin() || isManager() || item.requestedBy._id === user._id) && (
+            <Tooltip title={getActionTooltip("delete", item)} placement="top">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={!canDeleteTicket(item)}
+                onClick={() => handleDelete(item)}
+                className={
+                  canDeleteTicket(item)
+                    ? "text-red-600 hover:text-red-900"
+                    : "opacity-50 cursor-not-allowed"
+                }
+              >
+                <TrashIcon className="w-4 h-4" />
+              </Button>
+            </Tooltip>
           )}
         </div>
       ),
     },
-  ];
-
-  const ticketStatuses = [
-    { value: "", label: "Tất cả trạng thái" },
-    { value: "PENDING", label: "Chờ xử lý" },
-    { value: "IN_PROGRESS", label: "Đang thực hiện" },
-    { value: "COMPLETED", label: "Hoàn thành" },
-    { value: "CANCELLED", label: "Đã hủy" },
-    { value: "ON_HOLD", label: "Tạm dừng" },
-  ];
-
-  const ticketPriorities = [
-    { value: "", label: "Tất cả độ ưu tiên" },
-    { value: "LOW", label: "Thấp" },
-    { value: "MEDIUM", label: "Trung bình" },
-    { value: "HIGH", label: "Cao" },
-    { value: "CRITICAL", label: "Khẩn cấp" },
-  ];
-
-  const ticketTypes = [
-    { value: "", label: "Tất cả loại" },
-    { value: "PREVENTIVE", label: "Phòng ngừa" },
-    { value: "CORRECTIVE", label: "Khắc phục" },
-    { value: "EMERGENCY", label: "Khẩn cấp" },
-    { value: "SCHEDULED", label: "Đã lên lịch" },
   ];
 
   return (
@@ -375,17 +458,20 @@ const MaintenanceTickets = () => {
             Quản lý phiếu bảo dưỡng thiết bị và theo dõi tiến độ thực hiện
           </p>
         </div>
-        <Button
-          variant="primary"
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center"
-        >
-          <PlusIcon className="w-4 h-4 mr-2" />
-          Tạo phiếu bảo dưỡng
-        </Button>
+        {isAdmin() || isManager() ? (
+          <Tooltip title="Tạo phiếu bảo dưỡng mới" placement="left">
+            <Button
+              variant="primary"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center"
+            >
+              <PlusIcon className="w-4 h-4 mr-2" />
+              Tạo phiếu bảo dưỡng
+            </Button>
+          </Tooltip>
+        ) : null}
       </div>
 
-      {/* Statistics Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Tổng phiếu"
@@ -464,21 +550,24 @@ const MaintenanceTickets = () => {
           </div>
 
           <div className="flex items-end">
-            <Button
-              variant="secondary"
-              onClick={() =>
-                setFilters({
-                  search: "",
-                  status: "",
-                  priority: "",
-                  type: "",
-                  assignedTo: "",
-                })
-              }
-              className="w-full"
-            >
-              Xóa bộ lọc
-            </Button>
+            {/* ✅ Clear Filter Button với Tooltip */}
+            <Tooltip title="Xóa tất cả bộ lọc" placement="top">
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  setFilters({
+                    search: "",
+                    status: "",
+                    priority: "",
+                    type: "",
+                    assignedTo: "",
+                  })
+                }
+                className="w-full"
+              >
+                Xóa bộ lọc
+              </Button>
+            </Tooltip>
           </div>
         </div>
       </div>

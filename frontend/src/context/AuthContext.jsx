@@ -16,7 +16,7 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [token, setToken] = useState(Cookies.get("token"));
 
   useEffect(() => {
@@ -33,6 +33,13 @@ export const AuthProvider = ({ children }) => {
         Cookies.remove("token");
         Cookies.remove("userId");
       }
+    } else if (
+      !storedUser &&
+      !storedToken &&
+      window.location.window.location.pathname !== "/login" &&
+      !window.location.pathname.includes("/confirm-account")
+    ) {
+      window.location.href = "/login";
     }
     setLoading(false);
   }, []);
@@ -48,7 +55,6 @@ export const AuthProvider = ({ children }) => {
         setUser(user);
         setToken(tokens.accessToken);
 
-        // Set cookies with options
         const cookieOptions = {
           expires: 7,
           secure: process.env.NODE_ENV === "production",
@@ -60,7 +66,7 @@ export const AuthProvider = ({ children }) => {
         Cookies.set("userId", user._id, cookieOptions);
 
         message.success("Đăng nhập thành công!");
-        return { success: true };
+        return { success: true, roles: user.roles };
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -78,7 +84,7 @@ export const AuthProvider = ({ children }) => {
     Cookies.remove("user");
     Cookies.remove("token");
     Cookies.remove("userId");
-
+    window.location.href = "/login";
     message.success("Đăng xuất thành công!");
   };
 
@@ -93,7 +99,6 @@ export const AuthProvider = ({ children }) => {
   const isTechnician = () => {
     return user?.roles?.includes("TECHNICIAN") || isManager();
   };
-
   const value = {
     user,
     token,

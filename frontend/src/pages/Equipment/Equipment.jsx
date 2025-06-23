@@ -1,5 +1,7 @@
 // src/pages/Equipment/Equipment.jsx
 import {
+  ChartBarIcon,
+  ClockIcon,
   EyeIcon,
   MagnifyingGlassIcon,
   PencilIcon,
@@ -7,32 +9,41 @@ import {
   TrashIcon,
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
+import { message } from "antd";
 import { useEffect, useState } from "react";
+import Button from "../../components/Common/Button/Button";
+import Input from "../../components/Common/Input/Input";
+import Modal from "../../components/Common/Modal/Modal";
+import Select from "../../components/Common/Select/Select";
+import Table from "../../components/Common/Table/Table";
+import EquipmentDetailModal from "../../components/EquipmentDetailModal/EquipmentDetailModal";
+import EquipmentForm from "../../components/EquipmentForm/EquipmentForm";
+import StatsCard from "../../components/StatsCard/StatsCard";
+import { useAuth } from "../../context/AuthContext";
 import {
   createEquipment,
   deleteEquipment,
+  getEquipmentStatistics,
   getEquipments,
+  getEquipmentsDueForMaintenance,
   updateEquipment,
+  updateOperatingHours,
 } from "../../services/equipmentService";
-import { useAuth } from "../../context/AuthContext";
-import Button from "../../components/Common/Button/Button";
-import StatsCard from "../../components/StatsCard/StatsCard";
-import Input from "../../components/Common/Input/Input";
-import Select from "../../components/Common/Select/Select";
-import Table from "../../components/Common/Table/Table";
-import Modal from "../../components/Common/Modal/Modal";
-import { message } from "antd";
-import EquipmentForm from "../../components/EquipmentForm/EquipmentForm";
-import EquipmentDetailModal from "../../components/EquipmentDetailModal/EquipmentDetailModal";
+import { statusText } from "../../utils/const";
 
 const Equipment = () => {
   const { isAdmin, isManager } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [equipments, setEquipments] = useState([]);
+  const [statistics, setStatistics] = useState({});
   const [selectedEquipment, setSelectedEquipment] = useState(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isOperatingHoursModalOpen, setIsOperatingHoursModalOpen] =
+    useState(false);
+  const [operatingHours, setOperatingHours] = useState("");
 
   const [filters, setFilters] = useState({
     search: "",
@@ -48,6 +59,7 @@ const Equipment = () => {
 
   useEffect(() => {
     fetchEquipments();
+    fetchStatistics();
   }, [filters, pagination.page]);
 
   const fetchEquipments = async () => {
@@ -70,12 +82,25 @@ const Equipment = () => {
     }
   };
 
+  const fetchStatistics = async () => {
+    try {
+      setStatsLoading(true);
+      const stats = await getEquipmentStatistics();
+      setStatistics(stats);
+    } catch (error) {
+      console.error("Lỗi khi tải thống kê:", error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
   const handleCreate = async (data) => {
     try {
       await createEquipment(data);
       message.success("Tạo thiết bị thành công");
       setIsCreateModalOpen(false);
       fetchEquipments();
+      fetchStatistics();
     } catch (error) {
       message.error("Lỗi khi tạo thiết bị");
     }
@@ -88,6 +113,7 @@ const Equipment = () => {
       setIsEditModalOpen(false);
       setSelectedEquipment(null);
       fetchEquipments();
+      fetchStatistics();
     } catch (error) {
       message.error("Lỗi khi cập nhật thiết bị");
     }
@@ -99,9 +125,54 @@ const Equipment = () => {
         await deleteEquipment(equipmentId);
         message.success("Xóa thiết bị thành công");
         fetchEquipments();
+        fetchStatistics();
       } catch (error) {
         message.error("Lỗi khi xóa thiết bị");
       }
+    }
+  };
+
+  const handleUpdateOperatingHours = async () => {
+    if (!selectedEquipment || !operatingHours) {
+      message.error("Vui lòng nhập số giờ hoạt động");
+      return;
+    }
+
+    try {
+      await updateOperatingHours(
+        selectedEquipment._id,
+        parseFloat(operatingHours)
+      );
+      message.success("Cập nhật số giờ hoạt động thành công");
+      setIsOperatingHoursModalOpen(false);
+      setSelectedEquipment(null);
+      setOperatingHours("");
+      fetchEquipments();
+    } catch (error) {
+      message.error("Lỗi khi cập nhật số giờ hoạt động");
+    }
+  };
+
+  const handleViewDueMaintenance = async () => {
+    try {
+      const response = await getEquipmentsDueForMaintenance({
+        page: 1,
+        limit: 100,
+      });
+      const dueEquipments = response.data.data;
+
+      if (dueEquipments.length === 0) {
+        message.info("Không có thiết bị nào cần bảo dưỡng");
+        return;
+      }
+
+      // Show modal hoặc navigate đến trang maintenance
+      message.success(`Có ${dueEquipments.length} thiết bị cần bảo dưỡng`);
+
+      // Có thể mở modal hiển thị danh sách hoặc navigate
+      console.log("Due maintenance equipments:", dueEquipments);
+    } catch (error) {
+      message.error("Lỗi khi tải danh sách thiết bị cần bảo dưỡng");
     }
   };
 
@@ -116,12 +187,6 @@ const Equipment = () => {
   };
 
   const getStatusText = (status) => {
-    const statusText = {
-      ACTIVE: "Hoạt động",
-      MAINTENANCE: "Bảo dưỡng",
-      REPAIR: "Sửa chữa",
-      INACTIVE: "Ngừng hoạt động",
-    };
     return statusText[status] || status;
   };
 
@@ -201,6 +266,18 @@ const Equipment = () => {
                 size="sm"
                 onClick={() => {
                   setSelectedEquipment(item);
+                  setOperatingHours(item.operatingHours || 0);
+                  setIsOperatingHoursModalOpen(true);
+                }}
+                title="Cập nhật giờ hoạt động"
+              >
+                <ClockIcon className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedEquipment(item);
                   setIsEditModalOpen(true);
                 }}
               >
@@ -248,43 +325,64 @@ const Equipment = () => {
             Quản lý thông tin thiết bị, theo dõi trạng thái và lịch bảo dưỡng
           </p>
         </div>
-        {(isAdmin() || isManager()) && (
+        <div className="flex space-x-3">
           <Button
-            variant="primary"
-            onClick={() => setIsCreateModalOpen(true)}
+            variant="secondary"
+            onClick={handleViewDueMaintenance}
             className="flex items-center"
           >
-            <PlusIcon className="w-4 h-4 mr-2" />
-            Thêm thiết bị
+            <ChartBarIcon className="w-4 h-4 mr-2" />
+            Thiết bị cần BĐ
           </Button>
-        )}
+          {(isAdmin() || isManager()) && (
+            <Button
+              variant="primary"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center"
+            >
+              <PlusIcon className="w-4 h-4 mr-2" />
+              Thêm thiết bị
+            </Button>
+          )}
+        </div>
       </div>
+
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Tổng thiết bị"
-          value={pagination.total}
+          value={statistics.totalEquipments || 0}
           icon={WrenchScrewdriverIcon}
           color="blue"
+          loading={statsLoading}
         />
         <StatsCard
           title="Đang hoạt động"
-          value={equipments.filter((e) => e.status === "ACTIVE").length}
+          value={
+            statistics.statusStats?.find((s) => s._id === "ACTIVE")?.count || 0
+          }
           icon={WrenchScrewdriverIcon}
           color="green"
+          loading={statsLoading}
         />
         <StatsCard
           title="Đang bảo dưỡng"
-          value={equipments.filter((e) => e.status === "MAINTENANCE").length}
+          value={
+            statistics.statusStats?.find((s) => s._id === "MAINTENANCE")
+              ?.count || 0
+          }
           icon={WrenchScrewdriverIcon}
           color="yellow"
+          loading={statsLoading}
         />
         <StatsCard
-          title="Cần sửa chữa"
-          value={equipments.filter((e) => e.status === "REPAIR").length}
+          title="Cần bảo dưỡng"
+          value={statistics.maintenanceDue || 0}
           icon={WrenchScrewdriverIcon}
           color="red"
+          loading={statsLoading}
         />
       </div>
+
       {/* Filters */}
       <div className="bg-white p-6 rounded-lg shadow">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -349,6 +447,7 @@ const Equipment = () => {
           </Button>
         </div>
       </div>
+
       <div className="bg-white rounded-lg shadow">
         <Table
           columns={columns}
@@ -362,6 +461,8 @@ const Equipment = () => {
           }}
         />
       </div>
+
+      {/* Create Modal */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
@@ -373,6 +474,8 @@ const Equipment = () => {
           onCancel={() => setIsCreateModalOpen(false)}
         />
       </Modal>
+
+      {/* Edit Modal */}
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => {
@@ -391,6 +494,51 @@ const Equipment = () => {
           }}
         />
       </Modal>
+
+      {/* Operating Hours Modal */}
+      <Modal
+        isOpen={isOperatingHoursModalOpen}
+        onClose={() => {
+          setIsOperatingHoursModalOpen(false);
+          setSelectedEquipment(null);
+          setOperatingHours("");
+        }}
+        title="Cập nhật số giờ hoạt động"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Thiết bị: {selectedEquipment?.equipmentCode} -{" "}
+              {selectedEquipment?.name}
+            </label>
+            <Input
+              label="Số giờ hoạt động"
+              type="number"
+              value={operatingHours}
+              onChange={(e) => setOperatingHours(e.target.value)}
+              placeholder="Nhập số giờ hoạt động"
+              min="0"
+            />
+          </div>
+          <div className="flex justify-end space-x-3">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsOperatingHoursModalOpen(false);
+                setSelectedEquipment(null);
+                setOperatingHours("");
+              }}
+            >
+              Hủy
+            </Button>
+            <Button variant="primary" onClick={handleUpdateOperatingHours}>
+              Cập nhật
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       <EquipmentDetailModal
         equipment={selectedEquipment}
         isOpen={isDetailModalOpen}

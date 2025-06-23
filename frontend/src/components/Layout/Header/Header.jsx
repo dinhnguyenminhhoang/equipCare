@@ -9,11 +9,12 @@ import {
   ArrowRightOnRectangleIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const Header = ({ user, onMenuClick, onNotificationClick }) => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { logout } = useAuth();
-
+  const navigator = useNavigate();
   const handleLogout = () => {
     logout();
     setUserMenuOpen(false);
@@ -23,9 +24,7 @@ const Header = ({ user, onMenuClick, onNotificationClick }) => {
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          {/* Left side */}
           <div className="flex items-center">
-            {/* Mobile menu button */}
             <button
               type="button"
               className="lg:hidden -ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
@@ -35,7 +34,6 @@ const Header = ({ user, onMenuClick, onNotificationClick }) => {
               <Bars3Icon className="h-6 w-6" aria-hidden="true" />
             </button>
 
-            {/* Page title */}
             <div className="ml-4 lg:ml-0">
               <h1 className="text-2xl font-semibold text-gray-900">
                 Quản lý thiết bị
@@ -43,21 +41,7 @@ const Header = ({ user, onMenuClick, onNotificationClick }) => {
             </div>
           </div>
 
-          {/* Right side */}
           <div className="flex items-center space-x-4">
-            {/* Notifications */}
-            <button
-              type="button"
-              className="relative p-2 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-              onClick={onNotificationClick}
-            >
-              <span className="sr-only">View notifications</span>
-              <BellIcon className="h-6 w-6" aria-hidden="true" />
-              {/* Notification badge */}
-              <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400 ring-2 ring-white"></span>
-            </button>
-
-            {/* User menu */}
             <div className="relative">
               <button
                 type="button"
@@ -73,8 +57,6 @@ const Header = ({ user, onMenuClick, onNotificationClick }) => {
                 </div>
                 <ChevronDownIcon className="h-4 w-4 text-gray-400" />
               </button>
-
-              {/* Dropdown menu */}
               {userMenuOpen && (
                 <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
                   <div className="py-1">
@@ -82,7 +64,9 @@ const Header = ({ user, onMenuClick, onNotificationClick }) => {
                       <p className="text-sm font-medium text-gray-900">
                         {user?.username}
                       </p>
-                      <p className="text-sm text-gray-500">{user?.email}</p>
+                      <p className="text-sm text-gray-500 max-w-48 overflow-hidden">
+                        {user?.email}
+                      </p>
                       <div className="mt-1">
                         {user?.roles?.map((role) => (
                           <span
@@ -97,18 +81,10 @@ const Header = ({ user, onMenuClick, onNotificationClick }) => {
 
                     <button
                       className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
-                      onClick={() => setUserMenuOpen(false)}
+                      onClick={() => navigator("/profile")}
                     >
                       <UserIcon className="mr-3 h-4 w-4" />
                       Thông tin cá nhân
-                    </button>
-
-                    <button
-                      className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <CogIcon className="mr-3 h-4 w-4" />
-                      Cài đặt
                     </button>
 
                     <div className="border-t border-gray-100">

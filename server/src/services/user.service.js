@@ -5,9 +5,13 @@ const { badRequestError, NotFoundError } = require("../core/error.response");
 const { paginate } = require("../utils/paginate");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const { removeUndefinedObject } = require("../utils");
+const { MaintenanceTicket } = require("../models/maintenanceTicket.model");
+const { RepairTicket } = require("../models/repairTicket.model");
 
 class UserService {
   static getUsers = async (queryParams) => {
+    queryParams = removeUndefinedObject(queryParams);
     const {
       page = 1,
       limit = 10,
@@ -26,7 +30,6 @@ class UserService {
       filters.roles = { $in: roleArray };
     }
     if (department) filters.department = new RegExp(department, "i");
-    if (isActive !== undefined) filters.isActive = isActive === "true";
 
     const searchFields = ["username", "email", "phone", "department"];
 
@@ -46,7 +49,45 @@ class UserService {
       options,
     });
   };
+  static getUsersTechnicians = async (queryParams) => {
+    queryParams = removeUndefinedObject(queryParams);
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      roles = "TECHNICIAN",
+      department,
+      isActive = true,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = queryParams;
 
+    const filters = {};
+
+    if (roles) {
+      const roleArray = Array.isArray(roles) ? roles : [roles];
+      filters.roles = { $in: roleArray };
+    }
+    if (department) filters.department = new RegExp(department, "i");
+    filters.isActive = isActive;
+    const searchFields = ["username", "email", "phone", "department"];
+
+    const options = {};
+    options.sort = { [sortBy]: sortOrder === "desc" ? -1 : 1 };
+
+    const projection = { password: 0, roles: 0 }; // Không trả về password và roles
+
+    return await paginate({
+      model: User,
+      query: filters,
+      limit: parseInt(limit),
+      page: parseInt(page),
+      searchText: search,
+      searchFields,
+      projection,
+      options,
+    });
+  };
   static getUserById = async (userId) => {
     const user = await User.findById(userId).select("-password").lean();
 
@@ -68,13 +109,11 @@ class UserService {
       isActive = true,
     } = payload;
 
-    // Kiểm tra email đã tồn tại
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       throw new badRequestError("Email already exists");
     }
 
-    // Kiểm tra username đã tồn tại (nếu có)
     if (username) {
       const existingUsername = await User.findOne({ username });
       if (existingUsername) {
@@ -82,7 +121,6 @@ class UserService {
       }
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
@@ -95,7 +133,6 @@ class UserService {
       isActive,
     });
 
-    // Trả về user không có password
     const { password: _, ...userWithoutPassword } = user.toObject();
     return userWithoutPassword;
   };
@@ -105,7 +142,6 @@ class UserService {
       throw new NotFoundError("User not found");
     }
 
-    // Kiểm tra email nếu có thay đổi
     if (payload.email && payload.email !== user.email) {
       const existingUser = await User.findOne({
         email: payload.email,
@@ -254,6 +290,7 @@ class UserService {
   };
 
   static getUserStatistics = async () => {
+    console.log("Fetching user statistics...");
     const [totalUsers, activeUsers, roleStats, departmentStats, recentUsers] =
       await Promise.all([
         User.countDocuments({}),
@@ -306,6 +343,23 @@ class UserService {
     return {
       message: "Password reset successfully",
       newPassword: newPassword ? undefined : passwordToSet, // Chỉ trả về password ngẫu nhiên
+    };
+  };
+  static getHistory = async (userId) => {
+    if (!userId) {
+      throw new badRequestError("User ID is required");
+    }
+    const maintenanceTicketsHistory = await MaintenanceTicket.find({
+      requestedBy: userId,
+      isActive: true,
+    });
+    const repairTicketsHistory = await RepairTicket.find({
+      requestedBy: userId,
+      isActive: true,
+    });
+    return {
+      maintenanceTicketsHistory,
+      repairTicketsHistory,
     };
   };
 }

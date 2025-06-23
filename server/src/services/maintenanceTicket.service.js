@@ -9,6 +9,7 @@ const {
 } = require("../models/inventoryTransaction.model");
 const { badRequestError, NotFoundError } = require("../core/error.response");
 const { paginate } = require("../utils/paginate");
+const DowntimeCalculatorController = require("../controllers/downtimeCalculator.controller");
 
 class MaintenanceTicketService {
   static createMaintenanceTicket = async (payload, user) => {
@@ -82,7 +83,6 @@ class MaintenanceTicketService {
       sortBy = "createdAt",
       sortOrder = "desc",
     } = queryParams;
-    // Xử lý và chuẩn bị các bộ lọc
     const filters = { isActive: true };
 
     if (status) filters.status = status;
@@ -203,7 +203,6 @@ class MaintenanceTicketService {
       },
       { new: true }
     );
-
     return await this.getMaintenanceTicketById(updatedTicket._id);
   };
 
@@ -257,7 +256,14 @@ class MaintenanceTicketService {
     const materialCost = ticket.materialsUsed.reduce((total, material) => {
       return total + (material.totalCost || 0);
     }, 0);
-
+    const completionDate = new Date();
+    const downtimeData =
+      DowntimeCalculatorController.calculateComprehensiveDowntime(
+        ticket.actualStartDate,
+        completionDate,
+        ticket.equipment.type,
+        ticket.type
+      );
     const updatedTicket = await MaintenanceTicket.findByIdAndUpdate(
       ticketId,
       {
@@ -268,6 +274,8 @@ class MaintenanceTicketService {
         nextMaintenanceDue,
         "costs.materialCost": materialCost,
         "costs.totalCost": materialCost,
+        "downtime.totalDowntime": downtimeData.totalDowntime,
+        "downtime.productionLoss": downtimeData.productionLoss,
       },
       { new: true }
     );
@@ -298,20 +306,34 @@ class MaintenanceTicketService {
     }
 
     // Cập nhật task
-    ticket.tasks[taskIndex] = { ...ticket.tasks[taskIndex], ...payload };
+    ticket.tasks[taskIndex] = {
+      ...ticket.tasks[taskIndex]._doc,
+      ...payload,
+    };
+
+    ticket.tasks[taskIndex].assignedTo = user.userId;
 
     if (payload.status === "COMPLETED") {
       ticket.tasks[taskIndex].isCompleted = true;
       ticket.tasks[taskIndex].endTime = new Date();
+      ticket.tasks[taskIndex].status = payload.status;
     }
 
+    ticket.markModified("tasks");
+
     await ticket.save();
+
     return await this.getMaintenanceTicketById(ticketId);
   };
 
   static addMaterialToMaintenance = async (ticketId, payload, user) => {
     const { materialId, quantityUsed } = payload;
-
+    console.log("Adding material to maintenance ticket", {
+      ticketId,
+      materialId,
+      quantityUsed,
+      user,
+    });
     const ticket = await MaintenanceTicket.findById(ticketId);
     if (!ticket) {
       throw new NotFoundError("Maintenance ticket not found");
@@ -326,12 +348,10 @@ class MaintenanceTicketService {
       throw new badRequestError("Insufficient material stock");
     }
 
-    // Cập nhật tồn kho vật tư
     await Material.findByIdAndUpdate(materialId, {
       $inc: { currentStock: -quantityUsed },
     });
 
-    // Thêm vật tư vào phiếu
     const materialUsed = {
       material: materialId,
       quantityUsed,

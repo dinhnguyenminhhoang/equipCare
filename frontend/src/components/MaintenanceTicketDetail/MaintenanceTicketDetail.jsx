@@ -3,6 +3,7 @@ import {
   CheckCircleIcon,
   ClockIcon,
   CogIcon,
+  CubeIcon,
   CurrencyDollarIcon,
   DocumentTextIcon,
   PencilIcon,
@@ -27,6 +28,7 @@ import Button from "../Common/Button/Button";
 import Input from "../Common/Input/Input";
 import Modal from "../Common/Modal/Modal";
 import Select from "../Common/Select/Select";
+import AddMaterialModal from "../AddMaterialModal/AddMaterialModal";
 
 const { TabPane } = Tabs;
 
@@ -37,13 +39,11 @@ const MaintenanceTicketDetail = ({ ticket, onClose, onUpdate }) => {
   const [loading, setLoading] = useState(false);
   const [materials, setMaterials] = useState([]);
 
-  // Modal states
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
 
-  // Form states
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskForm, setTaskForm] = useState({
     status: "",
@@ -71,7 +71,7 @@ const MaintenanceTicketDetail = ({ ticket, onClose, onUpdate }) => {
     try {
       setLoading(true);
       const response = await getMaintenanceTicketById(ticket._id);
-      setTicketDetail(response.data);
+      setTicketDetail(response);
     } catch (error) {
       console.error("Error fetching ticket detail:", error);
       message.error("Lỗi khi tải chi tiết phiếu bảo dưỡng");
@@ -91,12 +91,7 @@ const MaintenanceTicketDetail = ({ ticket, onClose, onUpdate }) => {
 
   const handleTaskUpdate = async () => {
     try {
-      await updateMaintenanceTask(
-        ticketDetail._id,
-        selectedTask._id,
-        taskForm,
-        user
-      );
+      await updateMaintenanceTask(ticketDetail._id, selectedTask._id, taskForm);
       message.success("Cập nhật công việc thành công");
       setIsTaskModalOpen(false);
       fetchTicketDetail();
@@ -106,16 +101,14 @@ const MaintenanceTicketDetail = ({ ticket, onClose, onUpdate }) => {
     }
   };
 
-  const handleAddMaterial = async () => {
+  const handleAddMaterial = async (formData) => {
+    console.log("Adding material with formData:", formData);
     try {
-      await addMaterialToMaintenance(
-        ticketDetail._id,
-        {
-          materialId: materialForm.materialId,
-          quantityUsed: parseInt(materialForm.quantityUsed),
-        },
-        user
-      );
+      await addMaterialToMaintenance(ticketDetail._id, {
+        materialId: formData.materialId,
+        quantityUsed: parseInt(formData.quantityUsed),
+        isWarrantyItem: formData.isWarrantyItem,
+      });
       message.success("Thêm vật tư thành công");
       setIsMaterialModalOpen(false);
       setMaterialForm({ materialId: "", quantityUsed: "" });
@@ -311,13 +304,13 @@ const MaintenanceTicketDetail = ({ ticket, onClose, onUpdate }) => {
               Hoàn thành
             </Button>
           )}
-
+          {/* 
           {canEditTicket() && ticketDetail.status !== "COMPLETED" && (
             <Button variant="outline" size="sm" className="flex items-center">
               <PencilIcon className="w-4 h-4 mr-1" />
               Chỉnh sửa
             </Button>
-          )}
+          )} */}
         </div>
       </div>
 
@@ -556,16 +549,6 @@ const MaintenanceTicketDetail = ({ ticket, onClose, onUpdate }) => {
                 <h3 className="text-lg font-medium text-gray-900">
                   Danh sách công việc
                 </h3>
-                {ticketDetail.status === "IN_PROGRESS" && canEditTicket() && (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="flex items-center"
-                  >
-                    <PlusIcon className="w-4 h-4 mr-1" />
-                    Thêm công việc
-                  </Button>
-                )}
               </div>
 
               {ticketDetail.tasks?.length > 0 ? (
@@ -731,17 +714,7 @@ const MaintenanceTicketDetail = ({ ticket, onClose, onUpdate }) => {
                     </div>
                   ))}
 
-                  {/* Total Cost */}
-                  <div className="border-t border-gray-200 pt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-medium text-gray-900">
-                        Tổng chi phí vật tư:
-                      </span>
-                      <span className="text-lg font-bold text-green-600">
-                        {formatCurrency(ticketDetail.costs?.materialCost || 0)}
-                      </span>
-                    </div>
-                  </div>
+                  <></>
                 </div>
               ) : (
                 <div className="text-center py-12">
@@ -828,7 +801,7 @@ const MaintenanceTicketDetail = ({ ticket, onClose, onUpdate }) => {
                         Tổng thời gian dừng
                       </span>
                       <span className="text-lg font-semibold text-gray-900">
-                        {ticketDetail.downtime?.totalDowntime || 0} giờ
+                        {ticketDetail.downtime?.totalDowntime || 0} phút
                       </span>
                     </div>
                   </div>
@@ -852,9 +825,6 @@ const MaintenanceTicketDetail = ({ ticket, onClose, onUpdate }) => {
         </Tabs>
       </div>
 
-      {/* Modals */}
-
-      {/* Task Update Modal */}
       <Modal
         isOpen={isTaskModalOpen}
         onClose={() => setIsTaskModalOpen(false)}
@@ -907,66 +877,11 @@ const MaintenanceTicketDetail = ({ ticket, onClose, onUpdate }) => {
         </div>
       </Modal>
 
-      {/* Add Material Modal */}
-      <Modal
+      <AddMaterialModal
         isOpen={isMaterialModalOpen}
         onClose={() => setIsMaterialModalOpen(false)}
-        title="Thêm vật tư"
-        size="md"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Vật tư
-            </label>
-            <Select
-              value={materialForm.materialId}
-              onChange={(value) =>
-                setMaterialForm({ ...materialForm, materialId: value })
-              }
-              options={[
-                { value: "", label: "Chọn vật tư..." },
-                ...materials.map((material) => ({
-                  value: material._id,
-                  label: `${material.materialCode} - ${material.name} (Tồn: ${material.currentStock} ${material.unit})`,
-                })),
-              ]}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Số lượng sử dụng
-            </label>
-            <Input
-              type="number"
-              value={materialForm.quantityUsed}
-              onChange={(e) =>
-                setMaterialForm({
-                  ...materialForm,
-                  quantityUsed: e.target.value,
-                })
-              }
-              placeholder="Nhập số lượng..."
-              min="1"
-            />
-          </div>
-
-          <div className="flex justify-end space-x-3">
-            <Button
-              variant="secondary"
-              onClick={() => setIsMaterialModalOpen(false)}
-            >
-              Hủy
-            </Button>
-            <Button variant="primary" onClick={handleAddMaterial}>
-              Thêm vật tư
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Start Maintenance Modal */}
+        onSubmit={handleAddMaterial}
+      />
       <Modal
         isOpen={isStartModalOpen}
         onClose={() => setIsStartModalOpen(false)}
@@ -996,7 +911,6 @@ const MaintenanceTicketDetail = ({ ticket, onClose, onUpdate }) => {
         </div>
       </Modal>
 
-      {/* Complete Maintenance Modal */}
       <Modal
         isOpen={isCompleteModalOpen}
         onClose={() => setIsCompleteModalOpen(false)}

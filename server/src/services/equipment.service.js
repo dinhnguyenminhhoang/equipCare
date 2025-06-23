@@ -170,10 +170,46 @@ class EquipmentService {
       { new: true }
     );
 
-    // Kiểm tra xem có cần bảo dưỡng không
-    await this.checkMaintenanceDue(updatedEquipment);
+    await this.autoUpdateMaintenanceSchedule(updatedEquipment);
 
     return updatedEquipment;
+  };
+
+  // Method mới để tự động cập nhật lịch bảo dưỡng
+  static autoUpdateMaintenanceSchedule = async (equipment) => {
+    const { operatingHours, maintenance } = equipment;
+    const lastMaintenanceHours = maintenance?.lastMaintenanceHours || 0;
+    const hoursSinceLastMaintenance = operatingHours - lastMaintenanceHours;
+
+    // Các mốc bảo dưỡng định kỳ
+    const maintenanceIntervals = [60, 120, 240, 480, 960];
+
+    let nextMaintenanceHours = null;
+    let nextMaintenanceDate = null;
+
+    // Tìm mốc bảo dưỡng tiếp theo
+    for (let interval of maintenanceIntervals) {
+      const nextMilestone = lastMaintenanceHours + interval;
+      if (nextMilestone > operatingHours) {
+        nextMaintenanceHours = nextMilestone;
+
+        // Ước tính ngày bảo dưỡng tiếp theo (giả sử 8h/ngày)
+        const hoursRemaining = nextMilestone - operatingHours;
+        const daysRemaining = Math.ceil(hoursRemaining / 8);
+        nextMaintenanceDate = new Date();
+        nextMaintenanceDate.setDate(
+          nextMaintenanceDate.getDate() + daysRemaining
+        );
+        break;
+      }
+    }
+
+    if (nextMaintenanceDate) {
+      await Equipment.findByIdAndUpdate(equipment._id, {
+        "maintenance.nextMaintenanceDate": nextMaintenanceDate,
+        "maintenance.nextMaintenanceHours": nextMaintenanceHours,
+      });
+    }
   };
 
   static getEquipmentsDueForMaintenance = async (queryParams) => {
@@ -184,30 +220,83 @@ class EquipmentService {
 
     if (type) filters.type = type;
 
-    // Lọc theo mức độ khẩn cấp
-    if (urgency === "overdue") {
-      filters["maintenance.nextMaintenanceDate"] = { $lt: currentDate };
-    } else if (urgency === "due_soon") {
-      const nextWeek = new Date();
-      nextWeek.setDate(currentDate.getDate() + 7);
-      filters["maintenance.nextMaintenanceDate"] = {
-        $gte: currentDate,
-        $lte: nextWeek,
-      };
-    } else if (urgency !== "all") {
-      filters["maintenance.nextMaintenanceDate"] = { $lte: currentDate };
+    // Lấy tất cả thiết bị active trước
+    let equipments = await Equipment.find(filters)
+      .populate("assignedTo", "username email")
+      .lean();
+
+    // Tính toán thiết bị cần bảo dưỡng dựa trên logic
+    const equipmentsDue = equipments.filter((equipment) => {
+      const { operatingHours, maintenance } = equipment;
+      const lastMaintenanceHours = maintenance?.lastMaintenanceHours || 0;
+      const hoursSinceLastMaintenance = operatingHours - lastMaintenanceHours;
+
+      // Kiểm tra các mốc bảo dưỡng (60h, 120h, 240h, 480h...)
+      const maintenanceIntervals = [60, 120, 240, 480, 960]; // Có thể config từ DB
+
+      for (let interval of maintenanceIntervals) {
+        if (hoursSinceLastMaintenance >= interval) {
+          // Tính mức độ khẩn cấp
+          const overdueHours = hoursSinceLastMaintenance - interval;
+          equipment.dueType = interval;
+          equipment.overdueHours = overdueHours;
+          equipment.urgencyLevel =
+            overdueHours > 24
+              ? "overdue"
+              : overdueHours > 0
+              ? "due"
+              : "due_soon";
+          return true;
+        }
+      }
+
+      // Kiểm tra bảo dưỡng theo thời gian (nếu có)
+      if (maintenance?.nextMaintenanceDate) {
+        const daysDiff = Math.ceil(
+          (currentDate - new Date(maintenance.nextMaintenanceDate)) /
+            (1000 * 60 * 60 * 24)
+        );
+        if (daysDiff >= 0) {
+          equipment.dueType = "scheduled";
+          equipment.overdueDays = daysDiff;
+          equipment.urgencyLevel =
+            daysDiff > 7 ? "overdue" : daysDiff > 0 ? "due" : "due_soon";
+          return true;
+        }
+      }
+
+      return false;
+    });
+
+    // Lọc theo urgency nếu cần
+    let filteredEquipments = equipmentsDue;
+    if (urgency !== "all") {
+      filteredEquipments = equipmentsDue.filter(
+        (eq) => eq.urgencyLevel === urgency
+      );
     }
 
-    const populate = [{ path: "assignedTo", select: "username email" }];
-
-    return await paginate({
-      model: Equipment,
-      query: filters,
-      limit: parseInt(limit),
-      page: parseInt(page),
-      populate,
-      options: { sort: { "maintenance.nextMaintenanceDate": 1 } },
+    // Sắp xếp theo mức độ khẩn cấp
+    filteredEquipments.sort((a, b) => {
+      const urgencyOrder = { overdue: 3, due: 2, due_soon: 1 };
+      return urgencyOrder[b.urgencyLevel] - urgencyOrder[a.urgencyLevel];
     });
+
+    // Phân trang
+    const total = filteredEquipments.length;
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + parseInt(limit);
+    const paginatedData = filteredEquipments.slice(startIndex, endIndex);
+
+    return {
+      data: paginatedData,
+      meta: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   };
 
   static getEquipmentStatistics = async () => {

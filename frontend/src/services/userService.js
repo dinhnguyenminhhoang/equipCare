@@ -65,3 +65,11 @@ export const resetUserPassword = async (id, data) => {
   const response = await instance.post(`/users/${id}/reset-password`, data);
   return response.data;
 };
+export const getuserTechnical = async (params = {}) => {
+  const response = await instance.get("/users/technicians", { params });
+  return response.data;
+};
+export const getHistory = async () => {
+  const response = await instance.get("/users/history");
+  return response.data;
+};

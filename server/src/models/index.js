@@ -46,16 +46,6 @@ const {
   NOTIFICATION_DOCUMENT_NAME,
   NOTIFICATION_COLLECTION_NAME,
 } = require("./notification.model");
-const {
-  Settings,
-  SETTINGS_DOCUMENT_NAME,
-  SETTINGS_COLLECTION_NAME,
-} = require("./setting.model");
-const {
-  AuditLog,
-  AUDIT_LOG_DOCUMENT_NAME,
-  AUDIT_LOG_COLLECTION_NAME,
-} = require("./auditLog.model");
 
 // Export tất cả models
 module.exports = {
@@ -69,8 +59,6 @@ module.exports = {
   WorkOrder,
   InventoryTransaction,
   Notification,
-  Settings,
-  AuditLog,
 
   // Document Names
   USERS_DOCUMENT_NAME,
@@ -82,8 +70,6 @@ module.exports = {
   WORK_ORDER_DOCUMENT_NAME,
   INVENTORY_TRANSACTION_DOCUMENT_NAME,
   NOTIFICATION_DOCUMENT_NAME,
-  SETTINGS_DOCUMENT_NAME,
-  AUDIT_LOG_DOCUMENT_NAME,
 
   // Collection Names
   USERS_COLLECTION_NAME,
@@ -95,8 +81,6 @@ module.exports = {
   WORK_ORDER_COLLECTION_NAME,
   INVENTORY_TRANSACTION_COLLECTION_NAME,
   NOTIFICATION_COLLECTION_NAME,
-  SETTINGS_COLLECTION_NAME,
-  AUDIT_LOG_COLLECTION_NAME,
 };
 
 // Utility function để lấy model theo tên

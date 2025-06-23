@@ -485,6 +485,7 @@ const MaterialDetailModal = ({ material, isOpen, onClose }) => {
       size="full"
       footer={
         <div className="flex justify-between items-center">
+
           <div className="text-sm text-gray-500">
             Cập nhật lần cuối: {formatDateTime(material.updatedAt)}
           </div>
@@ -492,7 +493,6 @@ const MaterialDetailModal = ({ material, isOpen, onClose }) => {
             <Button onClick={onClose} variant="secondary">
               Đóng
             </Button>
-            <Button variant="primary">Chỉnh sửa</Button>
           </div>
         </div>
       }
@@ -505,6 +505,7 @@ const MaterialDetailModal = ({ material, isOpen, onClose }) => {
           size="large"
         >
           <TabPane
+
             tab={
               <span className="flex items-center space-x-2">
                 <DocumentTextIcon className="w-4 h-4" />
@@ -548,25 +549,6 @@ const MaterialDetailModal = ({ material, isOpen, onClose }) => {
           >
             <div className="py-4">
               <SupplierTab />
-            </div>
-          </TabPane>
-
-          <TabPane
-            tab={
-              <span className="flex items-center space-x-2">
-                <ClockIcon className="w-4 h-4" />
-                <span>Lịch sử giao dịch</span>
-                {transactions.length > 0 && (
-                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
-                    {transactions.length}
-                  </span>
-                )}
-              </span>
-            }
-            key="transactions"
-          >
-            <div className="py-4">
-              <TransactionsTab />
             </div>
           </TabPane>
         </Tabs>

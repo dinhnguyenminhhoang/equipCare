@@ -27,8 +27,7 @@ export const NotificationProvider = ({ children }) => {
 
   useEffect(() => {
     fetchUnreadCount();
-    // Set up polling for new notifications
-    const interval = setInterval(fetchUnreadCount, 30000); // Check every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
   }, []);
 

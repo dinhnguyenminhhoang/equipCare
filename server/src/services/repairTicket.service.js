@@ -367,14 +367,12 @@ class RepairTicketService {
       throw new badRequestError("Insufficient material stock");
     }
 
-    // Cập nhật tồn kho vật tư (nếu không phải warranty)
     if (!isWarrantyItem) {
       await Material.findByIdAndUpdate(materialId, {
         $inc: { currentStock: -quantityUsed },
       });
     }
 
-    // Thêm vật tư vào phiếu
     const materialUsed = {
       material: materialId,
       quantityUsed,
@@ -389,7 +387,6 @@ class RepairTicketService {
       $push: { materialsUsed: materialUsed },
     });
 
-    // Tạo transaction log (nếu không phải warranty)
     if (!isWarrantyItem) {
       const transactionNumber = await this.generateTransactionNumber("TXN");
       await InventoryTransaction.create({

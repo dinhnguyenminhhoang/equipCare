@@ -171,7 +171,7 @@ const maintenanceTicketSchema = new Schema(
     },
     downtime: {
       totalDowntime: {
-        type: Number, // in hours
+        type: Number,
         min: 0,
         default: 0,
       },

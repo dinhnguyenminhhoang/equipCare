@@ -11,7 +11,12 @@ class UserController {
       data: await UserService.getUsers(req.query),
     }).send(res);
   };
-
+  getUsersTechnicians = async (req, res, next) => {
+    new SuccessResponse({
+      message: "Get users successfully!",
+      data: await UserService.getUsersTechnicians(req.query),
+    }).send(res);
+  };
   // Lấy thông tin người dùng theo ID (Admin only)
   getUserById = async (req, res, next) => {
     new SuccessResponse({
@@ -75,8 +80,6 @@ class UserController {
       data: await UserService.createUser(req.body),
     }).send(res);
   };
-
-  // Thống kê người dùng (Admin only)
   getUserStatistics = async (req, res, next) => {
     new SuccessResponse({
       message: "Get user statistics successfully!",
@@ -89,6 +92,12 @@ class UserController {
     new SuccessResponse({
       message: "Password reset successfully!",
       data: await UserService.resetUserPassword(req.params.id, req.body),
+    }).send(res);
+  };
+  getHistory = async (req, res, next) => {
+    new SuccessResponse({
+      message: "Get user history!",
+      data: await UserService.getHistory(req.user.userId),
     }).send(res);
   };
 }

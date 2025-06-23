@@ -14,10 +14,10 @@ const DefaultLayout = () => {
 
   const menuItems = [
     {
-      key: "/",
+      key: "/dashboard",
       icon: "📊",
       label: "Dashboard",
-      path: "/",
+      path: "/dashboard",
     },
     {
       key: "/equipment",
@@ -61,12 +61,6 @@ const DefaultLayout = () => {
       label: "Quản lý vật tư",
       path: "/materials",
     },
-    {
-      key: "/reports",
-      icon: "📈",
-      label: "Báo cáo & thống kê",
-      path: "/reports",
-    },
     ...(isAdmin()
       ? [
           {
@@ -74,12 +68,6 @@ const DefaultLayout = () => {
             icon: "👥",
             label: "Quản lý người dùng",
             path: "/users",
-          },
-          {
-            key: "/settings",
-            icon: "⚙️",
-            label: "Cài đặt hệ thống",
-            path: "/settings",
           },
         ]
       : []),

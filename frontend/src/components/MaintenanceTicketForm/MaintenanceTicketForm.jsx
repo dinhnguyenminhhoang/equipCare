@@ -72,7 +72,7 @@ const MaintenanceTicketForm = ({ initialData, onSubmit, onCancel }) => {
       const [equipmentRes, levelRes, userRes] = await Promise.all([
         getEquipments({ limit: 100, status: "ACTIVE" }),
         getMaintenanceLevels({ limit: 100 }),
-        getUsers({ limit: 100, roles: "TECHNICIAN,MANAGER" }),
+        getUsers({ limit: 100 }),
       ]);
       setEquipments(equipmentRes.data?.data || []);
       setMaintenanceLevels(levelRes.data?.data || []);

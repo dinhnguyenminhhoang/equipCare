@@ -46,8 +46,8 @@ const EquipmentDetailModal = ({ equipment, isOpen, onClose }) => {
         getRepairHistory(equipment._id, { limit: 10 }),
       ]);
 
-      setMaintenanceHistory(maintenanceRes.data || []);
-      setRepairHistory(repairRes.data || []);
+      setMaintenanceHistory(maintenanceRes.data.data || []);
+      setRepairHistory(repairRes.data.data || []);
     } catch (error) {
       console.error("Error fetching histories:", error);
       setMaintenanceHistory([]);
@@ -658,7 +658,6 @@ const EquipmentDetailModal = ({ equipment, isOpen, onClose }) => {
             <Button onClick={onClose} variant="secondary">
               Đóng
             </Button>
-            <Button variant="primary">Chỉnh sửa</Button>
           </div>
         </div>
       }
