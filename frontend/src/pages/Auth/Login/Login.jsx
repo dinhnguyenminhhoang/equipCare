@@ -64,7 +64,6 @@ const Login = () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -73,25 +72,33 @@ const Login = () => {
     setIsSubmitting(true);
 
     try {
+      console.log("Submitting login form...");
+
       const result = await login({
         email: formData.email,
         password: formData.password,
       });
-      // if (result.success && result.roles) {
-      //   if (formData.rememberMe) {
-      //     localStorage.setItem("rememberMe", "true");
-      //   }
-      //   const from = result.roles.includes("ADMIN")
-      //     ? "/dashboard"
-      //     : location.state?.from?.pathname || "/";
-      //   navigate(from, { replace: true });
-      // }
+      if (result.success && result.user) {
+        if (formData.rememberMe) {
+          localStorage.setItem("rememberMe", "true");
+        }
+        const userRoles = result.user.roles || result.roles;
+        if (userRoles.includes("ADMIN")) {
+          window.location.href = "/dashboard";
+        } else if (userRoles.includes("MANAGER")) {
+          window.location.href = "/dashboard";
+        } else {
+          const from = location.state?.from?.pathname || "/";
+          navigate(from, { replace: true });
+        }
+      }
     } catch (error) {
       console.error("Login failed:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">

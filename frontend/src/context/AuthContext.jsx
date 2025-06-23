@@ -16,100 +16,173 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [token, setToken] = useState(Cookies.get("token"));
+  const [loading, setLoading] = useState(true); // Bắt đầu với loading = true
+  const [token, setToken] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const storedUser = Cookies.get("user");
-    const storedToken = Cookies.get("token");
-
-    if (storedUser && storedToken) {
+    const initializeAuth = () => {
       try {
-        setUser(JSON.parse(storedUser));
-        setToken(storedToken);
+        const storedUser = Cookies.get("user");
+        const storedToken = Cookies.get("token");
+
+        console.log("Auth initialization:", {
+          hasStoredUser: !!storedUser,
+          hasStoredToken: !!storedToken,
+        });
+
+        if (storedUser && storedToken) {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setToken(storedToken);
+          console.log("User restored from cookies:", parsedUser);
+        }
       } catch (error) {
         console.error("Error parsing user data from cookie:", error);
         Cookies.remove("user");
         Cookies.remove("token");
         Cookies.remove("userId");
+      } finally {
+        setLoading(false);
+        setIsInitialized(true);
       }
-    } else if (
-      !storedUser &&
-      !storedToken &&
-      window.location.window.location.pathname !== "/login" &&
-      !window.location.pathname.includes("/confirm-account")
-    ) {
+    };
+
+    initializeAuth();
+  }, []);
+
+  // Redirect logic riêng biệt, chạy sau khi initialized
+  useEffect(() => {
+    if (!isInitialized || loading) return;
+
+    const currentPath = window.location.pathname;
+    const publicPaths = [
+      "/login",
+      "/register",
+      "/",
+      "/confirm-account",
+      "/history",
+    ];
+    const isPublicPath = publicPaths.some(
+      (path) => currentPath === path || currentPath.includes("/confirm-account")
+    );
+
+    console.log("Auth redirect check:", {
+      hasUser: !!user,
+      hasToken: !!token,
+      currentPath,
+      isPublicPath,
+    });
+
+    // Chỉ redirect nếu không có auth và đang ở protected route
+    if (!user && !token && !isPublicPath) {
+      console.log("Redirecting to login - no auth data");
       window.location.href = "/login";
     }
-    setLoading(false);
-  }, []);
+  }, [user, token, isInitialized, loading]);
 
   const login = async (credentials) => {
     try {
       setLoading(true);
+      console.log("Attempting login with:", credentials.email);
+
       const response = await customerLoginAPi(credentials);
+      console.log("Login API response:", response);
 
       if (response.data && response.data.tokens) {
-        const { user, tokens } = response.data;
+        const { user: userData, tokens } = response.data;
 
-        setUser(user);
+        console.log("Login successful, user data:", userData);
+        console.log("User roles:", userData.roles);
+
+        // Update state first
+        setUser(userData);
         setToken(tokens.accessToken);
 
+        // Then save to cookies
         const cookieOptions = {
           expires: 7,
           secure: process.env.NODE_ENV === "production",
           sameSite: "strict",
         };
 
-        Cookies.set("user", JSON.stringify(user), cookieOptions);
+        Cookies.set("user", JSON.stringify(userData), cookieOptions);
         Cookies.set("token", tokens.accessToken, cookieOptions);
-        Cookies.set("userId", user._id, cookieOptions);
+        Cookies.set("userId", userData._id, cookieOptions);
 
         message.success("Đăng nhập thành công!");
-        return { success: true, roles: user.roles };
+
+        // Return với user data để handleSubmit có thể sử dụng
+        return {
+          success: true,
+          roles: userData.roles,
+          user: userData,
+        };
+      } else {
+        console.error("Invalid response format:", response);
+        return { success: false, error: "Invalid response format" };
       }
     } catch (error) {
       console.error("Login error:", error);
-      message.error(error.response?.data?.message || "Đăng nhập thất bại!");
-      return { success: false, error: error.response?.data?.message };
+      const errorMessage =
+        error.response?.data?.message || "Đăng nhập thất bại!";
+      message.error(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
   };
 
   const logout = () => {
+    console.log("Logging out user");
     setUser(null);
     setToken(null);
 
     Cookies.remove("user");
     Cookies.remove("token");
     Cookies.remove("userId");
-    window.location.href = "/login";
+
     message.success("Đăng xuất thành công!");
+    window.location.href = "/login";
   };
 
   const isAdmin = () => {
-    return user?.roles?.includes("ADMIN");
+    const result = user?.roles?.includes("ADMIN");
+    return result;
   };
 
   const isManager = () => {
-    return user?.roles?.includes("MANAGER") || isAdmin();
+    const result = user?.roles?.includes("MANAGER") || isAdmin();
+    return result;
   };
 
   const isTechnician = () => {
-    return user?.roles?.includes("TECHNICIAN") || isManager();
+    const result = user?.roles?.includes("TECHNICIAN") || isManager();
+    return result;
   };
+
   const value = {
     user,
     token,
     loading,
+    isInitialized,
     login,
     logout,
     isAdmin,
     isManager,
     isTechnician,
-    isAuthenticated: !!token,
+    isAuthenticated: !!token && !!user,
   };
+
+  console.log("AuthContext current state:", {
+    hasUser: !!user,
+    hasToken: !!token,
+    loading,
+    isInitialized,
+    isAuthenticated: !!token && !!user,
+    userRoles: user?.roles,
+    userEmail: user?.email,
+  });
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
